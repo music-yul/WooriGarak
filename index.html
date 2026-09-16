@@ -36,7 +36,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v55<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v56<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -136,7 +136,7 @@ const JANGDAN_CONFIG={
   "중중모리":{bpm:85,beats:4,cellsPerBar:12,intervalFactor:0.55},
   "세마치":{bpm:100,beats:3,cellsPerBar:9,intervalFactor:0.36},
   "자진모리":{bpm:120,beats:4,cellsPerBar:12,intervalFactor:0.31},
-  "휘모리":{bpm:160,beats:4,cellsPerBar:12,intervalFactor:0.22}
+  "휘모리":{bpm:160,beats:4,cellsPerBar:8,intervalFactor:0.22}
 };
 let BEATS_PER_BAR=4, STEPS=BARS*JANGDAN_CONFIG["중모리"].cellsPerBar;
 let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
@@ -145,6 +145,11 @@ function currentJangdan(){return document.getElementById('jangdan')?.value||'중
 function bpm(){return JANGDAN_CONFIG[currentJangdan()].bpm}
 function cellsPerBar(){
   return JANGDAN_CONFIG[currentJangdan()].cellsPerBar;
+}
+// 장단마다 1박을 이루는 소박 수가 다를 수 있다 (예: 휘모리는 2소박, 나머지는 3소박).
+function subbeatsPerBeat(){
+  const cfg=JANGDAN_CONFIG[currentJangdan()];
+  return cfg.cellsPerBar/cfg.beats;
 }
 function applyJangdanData(){const s=jangdanStores[currentJangdan()];if(s.melody&&s.melody.length===currentNotes().length){melody=s.melody.map(r=>r.slice());janggu=s.janggu.slice()}else{melody=Array(currentNotes().length).fill(null).map(()=>Array(STEPS).fill(null));janggu=Array(STEPS).fill(null)}}
 function saveJangdanData(){const k=currentJangdan();jangdanStores[k].melody=melody.map(r=>r.slice());jangdanStores[k].janggu=janggu.slice()}
@@ -192,8 +197,8 @@ function buildMelodyGrid(){
       const d=document.createElement('div');
       d.className='beat-label beat-group-label';
       d.textContent=(p+1)+'박';
-      const start=b*cellsPerBar()+p*3+2;
-      d.style.gridColumn=`${start} / span 3`;
+      const start=b*cellsPerBar()+p*subbeatsPerBeat()+2;
+      d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;
       d.style.gridRow='2';
       if(p===0)d.style.borderLeft='3px solid #777';
       d.style.display='flex';
@@ -203,8 +208,8 @@ function buildMelodyGrid(){
     }
   }
   for(let c=0;c<STEPS;c++){
-    const d=document.createElement('div'); d.className='beat-label'+(c%3===0?' beat-start':'');
-    const sobak=(c%3)+1;
+    const d=document.createElement('div'); d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');
+    const sobak=(c%subbeatsPerBeat())+1;
     d.textContent=sobak+'소박'; d.style.gridColumn=String(c+2); d.style.gridRow='3';
     if(c%cellsPerBar()===0)d.style.borderLeft='3px solid #777'; grid.appendChild(d);
   }
@@ -214,7 +219,7 @@ function buildMelodyGrid(){
     const lab=document.createElement('div'); lab.className='note-label'; lab.textContent=displayNote;
     lab.style.gridColumn='1'; lab.style.gridRow=String(r+4); grid.appendChild(lab);
     for(let c=0;c<STEPS;c++){
-      const cell=document.createElement('div'); cell.className='cell'+(c%3===0?' beat-start':'')+(c%cellsPerBar()===0?' bar-start':'');
+      const cell=document.createElement('div'); cell.className='cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%cellsPerBar()===0?' bar-start':'');
       cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+4); cell.dataset.step=String(c);
       const v=melody[dataR][c];
       if(v){cell.classList.add('selected'); const m=document.createElement('span'); m.className='mark'; m.textContent=displayNote; cell.appendChild(m); const a=document.createElement('span'); a.className='art'; a.textContent=v.art==='tremolo'?'떠는음':v.art==='bend'?'꺾는음':''; cell.appendChild(a); const st=document.createElement('span'); st.className='dyn'; st.textContent=v.strength||'중'; cell.appendChild(st)}
@@ -232,9 +237,9 @@ function buildJangguGrid(){
  g.style.gridTemplateColumns=`120px repeat(${STEPS},74px)`;g.style.minWidth=(120+STEPS*74)+'px';g.style.gridTemplateRows='28px 30px 28px 58px';g.innerHTML='';
  const corner=document.createElement('div');corner.className='janggu-name';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';corner.textContent='장구';g.appendChild(corner);
  for(let b=0;b<BARS;b++){const d=document.createElement('div');d.className='bar-label';d.textContent=(b+1)+'장단';d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
- for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*3+2;d.style.gridColumn=`${start} / span 3`;d.style.gridRow='2';if(p===0)d.style.borderLeft='3px solid #777';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
- for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%3===0?' beat-start':'');d.textContent=((c%3)+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
- for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%3===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same)previewSound(JANGGU_AUDIO[selectedStroke],STRENGTH_VOLUME[selectedJangguStrength]);buildJangguGrid()};g.appendChild(cell)}
+ for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.style.borderLeft='3px solid #777';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
+ for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
+ for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same)previewSound(JANGGU_AUDIO[selectedStroke],STRENGTH_VOLUME[selectedJangguStrength]);buildJangguGrid()};g.appendChild(cell)}
 }
 function buildStrengthPalette(id,type){const p=document.getElementById(id);const label=p.querySelector('.strength-label');p.innerHTML='';p.appendChild(label);['강','중','약'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if((type==='melody'?selectedMelodyStrength:selectedJangguStrength)===name)b.classList.add('active');b.onclick=()=>{if(type==='melody')selectedMelodyStrength=name;else selectedJangguStrength=name;setStatus((type==='melody'?'선율 세기: ':'장구 세기: ')+name);buildStrengthPalette(id,type)};p.appendChild(b)})}
 function buildMelodyPalette(){const p=document.getElementById('melodyPalette');p.innerHTML='';[['basic','기본'],['tremolo','떠는 음'],['bend','꺾는 음']].forEach(([val,name])=>{const b=document.createElement('button');b.textContent=name;if(selectedArt===val)b.classList.add('active');b.onclick=()=>{selectedArt=val;setStatus('선율 입력: '+name);buildMelodyPalette()};p.appendChild(b)})}
@@ -463,18 +468,19 @@ function drawScoreCanvas(scale=2){
   ctx.font='14px sans-serif';ctx.fillText((document.getElementById('tori')?.value||'')+' · '+currentJangdan()+' · '+BEATS_PER_BAR+'박 · 8장단',20,50);
 
   const x0=left,y0=head;
+  const cfg=JANGDAN_CONFIG[currentJangdan()], cfgBarCells=cfg.cellsPerBar;
   ctx.font='bold 13px sans-serif';ctx.textAlign='center';
-  for(let b=0;b<BARS;b++){ctx.fillStyle='#f3f3f3';ctx.fillRect(x0+b*BEATS_PER_BAR*SUBBEATS_PER_BEAT*cell,68,BEATS_PER_BAR*SUBBEATS_PER_BEAT*cell,26);ctx.fillStyle='#111';ctx.fillText((b+1)+'장단',x0+b*BEATS_PER_BAR*SUBBEATS_PER_BEAT*cell+(BEATS_PER_BAR*SUBBEATS_PER_BEAT/2)*cell,86)}
+  for(let b=0;b<BARS;b++){ctx.fillStyle='#f3f3f3';ctx.fillRect(x0+b*cfgBarCells*cell,68,cfgBarCells*cell,26);ctx.fillStyle='#111';ctx.fillText((b+1)+'장단',x0+b*cfgBarCells*cell+(cfgBarCells/2)*cell,86)}
   ctx.font='11px sans-serif';
-  const cfg=JANGDAN_CONFIG[currentJangdan()];
   if(currentJangdan()==='중모리'){
     for(let c=0;c<STEPS;c++)ctx.fillText((c%12+1)+'박',x0+c*cell+0.5*cell,105);
   }else{
-    for(let c=0;c<STEPS;c+=3)ctx.fillText(((c%cfg.cellsPerBar)/3+1)+'박',x0+c*cell+1.5*cell,105);
+    const sb=subbeatsPerBeat();
+    for(let c=0;c<STEPS;c+=sb)ctx.fillText(((c%cfg.cellsPerBar)/sb+1)+'박',x0+c*cell+(sb/2)*cell,105);
   }
   ctx.textAlign='right';ctx.font='bold 15px sans-serif';
-  for(let r=0;r<rows;r++){const dataR=rows-1-r;const y=y0+38+r*rowH;ctx.fillStyle='#fff';ctx.fillRect(0,y,left,rowH);ctx.fillStyle='#111';ctx.fillText(notes[dataR],left-12,y+34);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%3===0?'#aaa':'#ddd')));ctx.strokeRect(x,y,cell,rowH);const v=melody[dataR][c];if(v){ctx.textAlign='center';ctx.font='bold 12px sans-serif';ctx.fillText(v.note,x+cell/2,y+25);ctx.font='bold 11px sans-serif';ctx.fillText(v.strength||'중',x+cell/2,y+45)}}}
-  const jy=y0+38+rows*rowH;ctx.textAlign='right';ctx.font='bold 15px sans-serif';ctx.fillText('장구',left-12,jy+35);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%3===0?'#aaa':'#ddd')));ctx.strokeRect(x,jy,cell,jangH);const v=janggu[c];if(v){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(v.stroke||v,x+cell/2,jy+25);ctx.font='bold 11px sans-serif';ctx.fillText(v.strength||'중',x+cell/2,jy+45)}}
+  for(let r=0;r<rows;r++){const dataR=rows-1-r;const y=y0+38+r*rowH;ctx.fillStyle='#fff';ctx.fillRect(0,y,left,rowH);ctx.fillStyle='#111';ctx.fillText(notes[dataR],left-12,y+34);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%subbeatsPerBeat()===0?'#aaa':'#ddd')));ctx.strokeRect(x,y,cell,rowH);const v=melody[dataR][c];if(v){ctx.textAlign='center';ctx.font='bold 12px sans-serif';ctx.fillText(v.note,x+cell/2,y+25);ctx.font='bold 11px sans-serif';ctx.fillText(v.strength||'중',x+cell/2,y+45)}}}
+  const jy=y0+38+rows*rowH;ctx.textAlign='right';ctx.font='bold 15px sans-serif';ctx.fillText('장구',left-12,jy+35);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%subbeatsPerBeat()===0?'#aaa':'#ddd')));ctx.strokeRect(x,jy,cell,jangH);const v=janggu[c];if(v){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(v.stroke||v,x+cell/2,jy+25);ctx.font='bold 11px sans-serif';ctx.fillText(v.strength||'중',x+cell/2,jy+45)}}
   return cv;
 }
 function exportPng(){if(!confirmStudentInfo())return;try{setStatus('악보 이미지를 만드는 중…');const cv=drawScoreCanvas(2);cv.toBlob(b=>{if(b){downloadBlob(b,projectTitle()+'.png');setStatus('악보 이미지 저장 완료')}},'image/png')}catch(e){console.error(e);setStatus('악보 이미지 저장 실패')}}
