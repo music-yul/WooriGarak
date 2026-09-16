@@ -36,7 +36,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v54<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v55<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -47,7 +47,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <section class="panel">
 <div class="toolbar">
 <div class="control"><label>토리</label><select id="tori"><option>경토리</option><option>수심가토리</option><option>육자배기토리</option><option>메나리토리</option></select></div>
-<div class="control"><label>장단</label><select id="jangdan"><option value="중모리">중모리</option><option value="중중모리">중중모리</option><option value="굿거리">굿거리</option><option value="세마치">세마치</option><option value="자진모리">자진모리</option></select></div>
+<div class="control"><label>장단</label><select id="jangdan"><option value="중모리">중모리</option><option value="중중모리">중중모리</option><option value="굿거리">굿거리</option><option value="세마치">세마치</option><option value="자진모리">자진모리</option><option value="휘모리">휘모리</option></select></div>
 <div class="control control-end"><label>입력 소리</label><select id="previewToggle"><option value="on">켜기</option><option value="off">끄기</option></select></div>
 </div>
 </section>
@@ -135,7 +135,8 @@ const JANGDAN_CONFIG={
   "굿거리":{bpm:60,beats:4,cellsPerBar:12,intervalFactor:0.4},
   "중중모리":{bpm:85,beats:4,cellsPerBar:12,intervalFactor:0.55},
   "세마치":{bpm:100,beats:3,cellsPerBar:9,intervalFactor:0.36},
-  "자진모리":{bpm:120,beats:4,cellsPerBar:12,intervalFactor:0.31}
+  "자진모리":{bpm:120,beats:4,cellsPerBar:12,intervalFactor:0.31},
+  "휘모리":{bpm:160,beats:4,cellsPerBar:12,intervalFactor:0.22}
 };
 let BEATS_PER_BAR=4, STEPS=BARS*JANGDAN_CONFIG["중모리"].cellsPerBar;
 let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
