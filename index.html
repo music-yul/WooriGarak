@@ -36,7 +36,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v56<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v57<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -116,9 +116,27 @@ function ornamentAudioAndRate(label,anchors){
   anchors.forEach(a=>{const d=Math.abs(semitoneOfPlain(a.label)-target);if(d<bestDist){bestDist=d;best=a}});
   return {u:best.u,rate:Math.pow(2,(target-semitoneOfPlain(best.label))/12)};
 }
+// 흘러내리는 음: 지정한 음에서 같은 토리의 구성음을 따라 최대 2음까지 미끄러져 내려간다.
+// 예) 메나리토리 라 → 솔 → 미 / 솔 → 미. 가장 낮은 음에서는 내려갈 곳이 없다.
+const FALL_MAX_STEPS=2;
+function fallSemitones(note){
+  const notes=currentNotes(), idx=notes.indexOf(note), path=[];
+  if(idx<0)return path;
+  for(let k=1;k<=FALL_MAX_STEPS&&idx-k>=0;k++)path.push(semitoneOf(notes[idx-k])-semitoneOf(note));
+  return path;
+}
+// 재생 속도를 시간에 따라 바꾸어 음높이가 미끄러지게 한다. (재생·음원 저장 공용)
+const FALL_HOLD=0.25, FALL_GLIDE=0.30;
+function applyFallCurve(rateParam,when,baseRate,path){
+  rateParam.setValueAtTime(baseRate,when);
+  let t=when+FALL_HOLD;
+  rateParam.setValueAtTime(baseRate,t);
+  path.forEach(d=>{t+=FALL_GLIDE;rateParam.exponentialRampToValueAtTime(baseRate*Math.pow(2,d/12),t)});
+}
 function resolveMelodyAudio(note,art){
   if(art==='tremolo')return ornamentAudioAndRate(note,TREMOLO_ANCHORS);
   if(art==='bend')return ornamentAudioAndRate(note,BEND_ANCHORS);
+  if(art==='fall'){const b=basicAudioAndRate(note);return {u:b.u,rate:b.rate,fall:fallSemitones(note)}}
   return basicAudioAndRate(note);
 }
 // Janggu data URLs are filled from v3 below via a compact embedded object.
@@ -222,11 +240,13 @@ function buildMelodyGrid(){
       const cell=document.createElement('div'); cell.className='cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%cellsPerBar()===0?' bar-start':'');
       cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+4); cell.dataset.step=String(c);
       const v=melody[dataR][c];
-      if(v){cell.classList.add('selected'); const m=document.createElement('span'); m.className='mark'; m.textContent=displayNote; cell.appendChild(m); const a=document.createElement('span'); a.className='art'; a.textContent=v.art==='tremolo'?'떠는음':v.art==='bend'?'꺾는음':''; cell.appendChild(a); const st=document.createElement('span'); st.className='dyn'; st.textContent=v.strength||'중'; cell.appendChild(st)}
+      if(v){cell.classList.add('selected'); const m=document.createElement('span'); m.className='mark'; m.textContent=displayNote; cell.appendChild(m); const a=document.createElement('span'); a.className='art'; a.textContent=v.art==='tremolo'?'떠는음':v.art==='bend'?'꺾는음':v.art==='fall'?'흘러내림':''; cell.appendChild(a); const st=document.createElement('span'); st.className='dyn'; st.textContent=v.strength||'중'; cell.appendChild(st)}
       cell.onclick=()=>{
         const turnOn=!melody[dataR][c];
-        melody[dataR][c]=turnOn?{note:currentNotes()[dataR],art:selectedArt,strength:selectedMelodyStrength}:null;
-        if(turnOn){const d=resolveMelodyAudio(currentNotes()[dataR],selectedArt);previewSound(d.u,STRENGTH_VOLUME[selectedMelodyStrength],d.rate)}
+        const noFall=(selectedArt==='fall'&&dataR===0);
+        melody[dataR][c]=turnOn?{note:currentNotes()[dataR],art:noFall?'basic':selectedArt,strength:selectedMelodyStrength}:null;
+        if(turnOn&&noFall)setStatus('가장 낮은 음이라 흘러내릴 곳이 없어요. 평으로 내는 음으로 입력했어요.');
+        if(turnOn){const d=resolveMelodyAudio(currentNotes()[dataR],melody[dataR][c].art);previewSound(d.u,STRENGTH_VOLUME[selectedMelodyStrength],d.rate,d.fall)}
         buildMelodyGrid();
       }; grid.appendChild(cell);
     }
@@ -242,7 +262,7 @@ function buildJangguGrid(){
  for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same)previewSound(JANGGU_AUDIO[selectedStroke],STRENGTH_VOLUME[selectedJangguStrength]);buildJangguGrid()};g.appendChild(cell)}
 }
 function buildStrengthPalette(id,type){const p=document.getElementById(id);const label=p.querySelector('.strength-label');p.innerHTML='';p.appendChild(label);['강','중','약'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if((type==='melody'?selectedMelodyStrength:selectedJangguStrength)===name)b.classList.add('active');b.onclick=()=>{if(type==='melody')selectedMelodyStrength=name;else selectedJangguStrength=name;setStatus((type==='melody'?'선율 세기: ':'장구 세기: ')+name);buildStrengthPalette(id,type)};p.appendChild(b)})}
-function buildMelodyPalette(){const p=document.getElementById('melodyPalette');p.innerHTML='';[['basic','기본'],['tremolo','떠는 음'],['bend','꺾는 음']].forEach(([val,name])=>{const b=document.createElement('button');b.textContent=name;if(selectedArt===val)b.classList.add('active');b.onclick=()=>{selectedArt=val;setStatus('선율 입력: '+name);buildMelodyPalette()};p.appendChild(b)})}
+function buildMelodyPalette(){const p=document.getElementById('melodyPalette');p.innerHTML='';[['basic','평으로 내는 음'],['tremolo','떠는 음'],['bend','꺾는 음'],['fall','흘러내리는 음']].forEach(([val,name])=>{const b=document.createElement('button');b.textContent=name;if(selectedArt===val)b.classList.add('active');b.onclick=()=>{selectedArt=val;setStatus('선율 입력: '+name);buildMelodyPalette()};p.appendChild(b)})}
 function buildJangguPalette(){const p=document.getElementById('jangguPalette');p.innerHTML='';['덩','쿵','덕','덕더','덕덕','기덕','더러러러'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if(name===selectedStroke)b.classList.add('active');b.onclick=()=>{selectedStroke=name;previewSound(JANGGU_AUDIO[name],STRENGTH_VOLUME[selectedJangguStrength]);setStatus('장구: '+name+' · 세기: '+selectedJangguStrength);buildJangguPalette()};p.appendChild(b)})}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
 /* ---- 재생 위치 표시 + 악보 자동 따라가기 ----
@@ -366,17 +386,17 @@ let audioCtx=null, scheduledSources=[];
 async function getAudioContext(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')await audioCtx.resume();return audioCtx}
 const bufferCache=new Map();
 async function decodeDataUrl(u){if(bufferCache.has(u))return bufferCache.get(u);const ctx=await getAudioContext();const ab=await(await fetch(u)).arrayBuffer();const buf=await ctx.decodeAudioData(ab);bufferCache.set(u,buf);return buf}
-async function scheduleBuffer(u,when,volume,rate=1){if(!u)return;const ctx=await getAudioContext();const buf=await decodeDataUrl(u);const src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;const gain=ctx.createGain();gain.gain.value=volume;src.connect(gain).connect(ctx.destination);src.start(when);scheduledSources.push(src);src.onended=()=>{const i=scheduledSources.indexOf(src);if(i>=0)scheduledSources.splice(i,1)}}
+async function scheduleBuffer(u,when,volume,rate=1,fall=null){if(!u)return;const ctx=await getAudioContext();const buf=await decodeDataUrl(u);const src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;if(fall&&fall.length)applyFallCurve(src.playbackRate,when,rate,fall);const gain=ctx.createGain();gain.gain.value=volume;src.connect(gain).connect(ctx.destination);src.start(when);scheduledSources.push(src);src.onended=()=>{const i=scheduledSources.indexOf(src);if(i>=0)scheduledSources.splice(i,1)}}
 function stopAll(){playing=false;scheduledSources.forEach(s=>{try{s.stop()}catch(e){}});scheduledSources=[];removePlaybackOutline();if(audioCtx){try{audioCtx.suspend()}catch(e){}}}
-async function play(mode){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c],d=artData(v);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.strength||'중'],d.rate))}}if(mode!=='melody'){const stroke=janggu[c];const strokeName=stroke&&(stroke.stroke||stroke);if(strokeName&&JANGGU_AUDIO[strokeName])jobs.push(scheduleBuffer(JANGGU_AUDIO[strokeName],when,STRENGTH_VOLUME[(stroke.strength||'중')],1))}}await Promise.all(jobs);const token=++playToken;await sleep((STEPS*step+lead)*1000);if(token===playToken)playing=false}
+async function play(mode){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c],d=artData(v);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.strength||'중'],d.rate,d.fall))}}if(mode!=='melody'){const stroke=janggu[c];const strokeName=stroke&&(stroke.stroke||stroke);if(strokeName&&JANGGU_AUDIO[strokeName])jobs.push(scheduleBuffer(JANGGU_AUDIO[strokeName],when,STRENGTH_VOLUME[(stroke.strength||'중')],1))}}await Promise.all(jobs);const token=++playToken;await sleep((STEPS*step+lead)*1000);if(token===playToken)playing=false}
 
 
 let statusTimer=null;
 // ---- 입력 시 소리 미리듣기 ----
 let previewEnabled=true;
-async function previewSound(u,volume,rate=1){
+async function previewSound(u,volume,rate=1,fall=null){
   if(!previewEnabled||!u)return;
-  try{const ctx=await getAudioContext();await scheduleBuffer(u,ctx.currentTime,volume,rate);}
+  try{const ctx=await getAudioContext();await scheduleBuffer(u,ctx.currentTime,volume,rate,fall);}
   catch(e){console.warn('미리듣기 실패',e);}
 }
 
@@ -430,7 +450,7 @@ async function renderComposition(mode='all'){
   const step=stepMs()/1000;
   const used=[];
   for(let c=0;c<STEPS;c++){
-    if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c],d=artData(v);if(d&&d.u)used.push({u:d.u,t:c*step,v:STRENGTH_VOLUME[v.strength||'중'],rate:d.rate||1})}}
+    if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c],d=artData(v);if(d&&d.u)used.push({u:d.u,t:c*step,v:STRENGTH_VOLUME[v.strength||'중'],rate:d.rate||1,fall:d.fall})}}
     if(mode!=='melody'){const j=janggu[c],name=j&&(j.stroke||j);if(name&&JANGGU_AUDIO[name])used.push({u:JANGGU_AUDIO[name],t:c*step,v:STRENGTH_VOLUME[j.strength||'중'],rate:1})}
   }
   if(!used.length)return null;
@@ -438,7 +458,7 @@ async function renderComposition(mode='all'){
   const tempCtx=new OfflineAudioContext(2,Math.ceil((STEPS*step+6)*44100),44100);
   const buffers=new Map();
   for(const u of unique){const ab=await (await fetch(u)).arrayBuffer();buffers.set(u,await tempCtx.decodeAudioData(ab.slice(0)))}
-  for(const job of used){const b=buffers.get(job.u);if(!b)continue;const src=tempCtx.createBufferSource();src.buffer=b;src.playbackRate.value=job.rate;const gain=tempCtx.createGain();gain.gain.value=job.v;src.connect(gain).connect(tempCtx.destination);try{src.start(job.t)}catch(e){}}
+  for(const job of used){const b=buffers.get(job.u);if(!b)continue;const src=tempCtx.createBufferSource();src.buffer=b;src.playbackRate.value=job.rate;if(job.fall&&job.fall.length)applyFallCurve(src.playbackRate,job.t,job.rate,job.fall);const gain=tempCtx.createGain();gain.gain.value=job.v;src.connect(gain).connect(tempCtx.destination);try{src.start(job.t)}catch(e){}}
   return await tempCtx.startRendering();
 }
 const EXPORT_LABEL={all:'전체',melody:'선율',janggu:'장단'};
