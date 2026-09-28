@@ -22,7 +22,8 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .palette-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:14px 18px;border-bottom:1px solid #ecdfca}
 .palette-row .palette{padding:0;border:0}
 .palette-row .strength-palette{margin-left:auto;flex-wrap:nowrap;align-items:center}
-.palette-row .strength-label{margin:0 4px 0 0}.cell .dyn{position:absolute;bottom:2px;left:4px;font-size:9px;color:#a1846a;font-weight:700}.j-cell .j-strength{position:absolute;bottom:3px;right:4px;font-size:9px;color:#a1846a;font-weight:700}.janggu-grid{min-width:7200px;display:grid;grid-template-columns:120px repeat(12,74px);grid-template-rows:58px}.janggu-name{display:flex;align-items:center;padding-left:18px;font-weight:700;background:#f7ede0;color:#6b2e22}.j-cell{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;border-right:1px solid #ecdfca}.j-cell.selected{background:#f3e3d6;font-weight:700;color:#a2531f;box-shadow:inset 0 0 0 1px #d69a6d}.export-menu{position:fixed;left:50%;transform:translateX(-50%);bottom:104px;z-index:32;display:none;flex-direction:column;gap:6px;padding:12px;background:rgba(255,252,246,.98);border:1px solid #e8dcc8;border-radius:14px;box-shadow:0 8px 24px rgba(107,46,34,.18);min-width:210px}
+.palette-row .strength-label{margin:0 4px 0 0}.cell .dyn{position:absolute;bottom:2px;left:4px;font-size:9px;color:#a1846a;font-weight:700}.j-cell .j-strength{position:absolute;bottom:3px;right:4px;font-size:9px;color:#a1846a;font-weight:700}.janggu-grid{min-width:7200px;display:grid;grid-template-columns:120px repeat(12,74px);grid-template-rows:58px}.janggu-name{display:flex;align-items:center;padding-left:18px;font-weight:700;background:#f7ede0;color:#6b2e22}.j-cell{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;background:rgba(255,255,255,.7);border-right:1px solid #ecdfca;border-bottom:1px solid #ecdfca}
+.j-cell:hover{background:#fbf3e6}.j-cell.selected{background:#f6e0cf;font-weight:700;color:#a2531f;box-shadow:inset 0 0 0 1px #cf8a5f}.export-menu{position:fixed;left:50%;transform:translateX(-50%);bottom:104px;z-index:32;display:none;flex-direction:column;gap:6px;padding:12px;background:rgba(255,252,246,.98);border:1px solid #e8dcc8;border-radius:14px;box-shadow:0 8px 24px rgba(107,46,34,.18);min-width:210px}
 .export-menu.open{display:flex}
 .export-menu .menu-title{font-size:12px;color:#8a6a52;font-weight:700;text-align:center;padding:2px 0 6px}
 .export-menu button{width:100%;font-weight:700;padding:11px 13px}
@@ -40,7 +41,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v59<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v61<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -258,8 +259,8 @@ function buildMelodyGrid(){
 }
 function buildJangguGrid(){
  const g=document.getElementById('jangguGrid'), barSteps=cellsPerBar();
- g.style.gridTemplateColumns=`120px repeat(${STEPS},74px)`;g.style.minWidth=(120+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
- const corner=document.createElement('div');corner.className='janggu-name';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';corner.textContent='장구';g.appendChild(corner);
+ g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
+ const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow='4';g.appendChild(jlab);
  for(let b=0;b<BARS;b++){const d=document.createElement('div');d.className='bar-label';d.textContent=(b+1)+'장단';d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
  for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.style.borderLeft='3px solid #777';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
  for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
@@ -332,6 +333,14 @@ function buildTrack(gridId,sel){
   };
 }
 
+// 선율·장구 격자의 가로 스크롤을 서로 맞춘다. (한쪽을 밀면 다른 쪽도 같이 움직임)
+(function syncGridScroll(){
+  const wraps=[document.getElementById('melodyGrid'),document.getElementById('jangguGrid')].map(g=>g&&g.closest('.grid-wrap')).filter(Boolean);
+  if(wraps.length<2)return;
+  wraps.forEach(w=>w.addEventListener('scroll',()=>{
+    wraps.forEach(o=>{if(o!==w&&Math.abs(o.scrollLeft-w.scrollLeft)>0.5)o.scrollLeft=w.scrollLeft});
+  },{passive:true}));
+})();
 function setupPlaybackOutline(){
   removePlaybackOutline();
   playbackTracks=[buildTrack('melodyGrid','.cell'),buildTrack('jangguGrid','.j-cell')].filter(Boolean);
