@@ -50,7 +50,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v4.5<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v4.6<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -62,7 +62,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <div class="toolbar">
 <div class="control"><label>토리</label><select id="tori"><option>경토리</option><option>수심가토리</option><option>육자배기토리</option><option>메나리토리</option></select></div>
 <div class="control"><label>장단</label><select id="jangdan"><option value="중모리">중모리</option><option value="중중모리">중중모리</option><option value="굿거리">굿거리</option><option value="세마치">세마치</option><option value="자진모리">자진모리</option><option value="휘모리">휘모리</option></select></div>
-<div class="control"><label for="speed">속도 · <span id="speedLabel">기본</span></label><div class="speed-box"><span>느리게</span><input type="range" id="speed" min="80" max="120" step="1" value="100" aria-label="속도 조절"><span>빠르게</span><button id="speedReset" type="button">기본</button></div></div>
+<div class="control"><label for="speed">속도 · <span id="speedLabel">기본</span></label><div class="speed-box"><span>느리게</span><input type="range" id="speed" min="82" max="118" step="1" value="100" aria-label="속도 조절"><span>빠르게</span><button id="speedReset" type="button">기본</button></div></div>
 <div class="control control-end"><label>입력 소리</label><select id="previewToggle"><option value="on">켜기</option><option value="off">끄기</option></select></div>
 </div>
 </section>
@@ -173,22 +173,23 @@ const SUBBEATS_PER_BEAT=3, BARS=8;
 const JANGDAN_CONFIG={
   // bpm은 실제 박 빠르기, intervalFactor는 그 박 안의 소박 수(1/소박수)를 뜻한다.
   // 소박 길이 = (60000/bpm) / (1÷intervalFactor) = (60000/bpm)*intervalFactor
-  "중모리":{bpm:60,beats:4,cellsPerBar:12,intervalFactor:1},        // 12박, 1박=60bpm
-  "굿거리":{bpm:48,beats:4,cellsPerBar:12,intervalFactor:1/3},      // 3소박×4박, 1박=48bpm
-  "중중모리":{bpm:40,beats:4,cellsPerBar:12,intervalFactor:1/3},    // 3소박×4박, 1박=40bpm
-  "세마치":{bpm:95,beats:3,cellsPerBar:9,intervalFactor:1/3},       // 3소박×3박, 1박=95bpm
-  "자진모리":{bpm:90,beats:4,cellsPerBar:12,intervalFactor:1/3},    // 3소박×4박, 1박=90bpm
-  "휘모리":{bpm:150,beats:4,cellsPerBar:8,intervalFactor:1/2}       // 2소박×4박, 1박=150bpm
+  // bpm=기본, min=느리게 끝, max=빠르게 끝 (국립국악원 국악사전 등 문헌상의 한배 범위를 참고)
+  "중모리":{bpm:85,min:70,max:100,beats:4,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
+  "굿거리":{bpm:70,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
+  "중중모리":{bpm:80,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
+  "세마치":{bpm:75,min:60,max:90,beats:3,cellsPerBar:9,intervalFactor:1/3},        // 3소박×3박, ♩.=60~90
+  "자진모리":{bpm:115,min:90,max:144,beats:4,cellsPerBar:12,intervalFactor:1/3},   // 3소박×4박, ♩.=90~144
+  "휘모리":{bpm:200,min:170,max:230,beats:4,cellsPerBar:8,intervalFactor:1/2}      // 2소박×4박, ♩=약 200~230
 };
 let BEATS_PER_BAR=4, STEPS=BARS*JANGDAN_CONFIG["중모리"].cellsPerBar;
 let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
 let splitCols=new Set(); // 정간을 둘로 나눈 칸(선율만 해당)의 열 번호
 const jangdanStores={};Object.keys(JANGDAN_CONFIG).forEach(k=>jangdanStores[k]={melody:null,janggu:null,splitCols:null});
 function currentJangdan(){return document.getElementById('jangdan')?.value||'중모리'}
-// 속도 조절: 장단 기본 BPM의 80%~120% (학생 화면에는 숫자를 보이지 않는다)
+// 속도 조절: 장단마다 정해 둔 느림~빠름 범위 안에서 조절 (학생 화면에는 숫자를 보이지 않는다)
 let speedPct=100;
 function speedTag(){return speedPct<=93?'느리게':(speedPct>=107?'빠르게':'기본')}
-function updateSpeedUI(){const sl=document.getElementById('speed');if(sl)sl.value=speedPct;const lb=document.getElementById('speedLabel');if(lb)lb.textContent=speedTag()}
+function updateSpeedUI(){const sl=document.getElementById('speed');if(sl){const c=JANGDAN_CONFIG[currentJangdan()];sl.min=Math.round(c.min/c.bpm*100);sl.max=Math.round(c.max/c.bpm*100);sl.value=speedPct}const lb=document.getElementById('speedLabel');if(lb)lb.textContent=speedTag()}
 function resetSpeed(){speedPct=100;updateSpeedUI()}
 function bpm(){return JANGDAN_CONFIG[currentJangdan()].bpm*speedPct/100}
 function cellsPerBar(){
@@ -624,6 +625,7 @@ function bindClick(id,fn){const el=document.getElementById(id);if(el)el.onclick=
 document.getElementById('jangdan').onchange=setJangdan;
 document.getElementById('speed').oninput=function(){speedPct=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
 document.getElementById('speedReset').onclick=resetSpeed;
+updateSpeedUI();
 bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
 
 // ---- 음원 다운로드 범위 선택 메뉴 ----
