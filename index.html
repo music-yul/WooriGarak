@@ -45,11 +45,12 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 @media(max-width:860px){.brand{font-size:28px}.brand-group{gap:18px}.student-fields{gap:14px}.student-fields label{font-size:13px}.student-fields input{width:78px;height:32px}.ver{font-size:11px}}
 @media(max-width:700px){header{min-height:64px;padding:14px 0}.header-inner{padding:0 10px}.main{padding:0 10px}.toolbar{gap:10px}.control select{max-width:145px}.control-end{margin-left:0}.brand{font-size:30px}.header-inner{flex-wrap:wrap;align-items:flex-start;gap:8px 16px}.brand-group{flex-wrap:wrap;gap:2px 14px}.student-fields{flex-wrap:wrap;gap:6px 14px}.student-fields label{font-size:13px}.student-fields input{height:32px;width:88px}.melody-grid{min-width:7000px}.janggu-grid{min-width:7000px}.cell{min-height:40px}.export-menu{bottom:106px;min-width:190px}.status-bar{bottom:106px;font-size:12px;padding:6px 13px}.bottom-bar{max-width:94vw;justify-content:flex-start;overflow-x:auto;padding:10px 12px}.bottom-bar button{flex:0 0 auto}}
 .export-busy{opacity:.6;pointer-events:none}
+.speed-box{display:flex;align-items:center;gap:8px;height:38px}.speed-box span{font-size:12px;color:#8a6a52;font-weight:700}.speed-box input[type=range]{width:130px;accent-color:#a8402c}.speed-box button{padding:6px 10px;font-size:12px}#speedLabel{color:#a8402c}@media(max-width:700px){.speed-box input[type=range]{width:96px}}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v4.4<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v4.5<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -61,6 +62,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <div class="toolbar">
 <div class="control"><label>토리</label><select id="tori"><option>경토리</option><option>수심가토리</option><option>육자배기토리</option><option>메나리토리</option></select></div>
 <div class="control"><label>장단</label><select id="jangdan"><option value="중모리">중모리</option><option value="중중모리">중중모리</option><option value="굿거리">굿거리</option><option value="세마치">세마치</option><option value="자진모리">자진모리</option><option value="휘모리">휘모리</option></select></div>
+<div class="control"><label for="speed">속도 · <span id="speedLabel">기본</span></label><div class="speed-box"><span>느리게</span><input type="range" id="speed" min="80" max="120" step="1" value="100" aria-label="속도 조절"><span>빠르게</span><button id="speedReset" type="button">기본</button></div></div>
 <div class="control control-end"><label>입력 소리</label><select id="previewToggle"><option value="on">켜기</option><option value="off">끄기</option></select></div>
 </div>
 </section>
@@ -183,7 +185,12 @@ let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
 let splitCols=new Set(); // 정간을 둘로 나눈 칸(선율만 해당)의 열 번호
 const jangdanStores={};Object.keys(JANGDAN_CONFIG).forEach(k=>jangdanStores[k]={melody:null,janggu:null,splitCols:null});
 function currentJangdan(){return document.getElementById('jangdan')?.value||'중모리'}
-function bpm(){return JANGDAN_CONFIG[currentJangdan()].bpm}
+// 속도 조절: 장단 기본 BPM의 80%~120% (학생 화면에는 숫자를 보이지 않는다)
+let speedPct=100;
+function speedTag(){return speedPct<=93?'느리게':(speedPct>=107?'빠르게':'기본')}
+function updateSpeedUI(){const sl=document.getElementById('speed');if(sl)sl.value=speedPct;const lb=document.getElementById('speedLabel');if(lb)lb.textContent=speedTag()}
+function resetSpeed(){speedPct=100;updateSpeedUI()}
+function bpm(){return JANGDAN_CONFIG[currentJangdan()].bpm*speedPct/100}
 function cellsPerBar(){
   return JANGDAN_CONFIG[currentJangdan()].cellsPerBar;
 }
@@ -196,6 +203,7 @@ function applyJangdanData(){const s=jangdanStores[currentJangdan()];if(s.melody&
 function saveJangdanData(){const k=currentJangdan();jangdanStores[k].melody=melody.map(r=>r.slice());jangdanStores[k].janggu=janggu.slice();jangdanStores[k].splitCols=[...splitCols]}
 function setJangdan(){
   saveJangdanData();
+  resetSpeed();
   const cfg=JANGDAN_CONFIG[currentJangdan()];
   BEATS_PER_BAR=cfg.beats;
   STEPS=BARS*cfg.cellsPerBar;
@@ -572,7 +580,7 @@ async function exportWav(mode='all'){
   try{
     const rendered=await renderComposition(mode);
     if(!rendered){setStatus(EXPORT_EMPTY[mode]);alert(EXPORT_EMPTY[mode]+' 먼저 입력한 뒤 저장해 주세요.');return;}
-    downloadBlob(wavEncode(rendered),projectTitle()+'_'+EXPORT_LABEL[mode]+'.wav');
+    downloadBlob(wavEncode(rendered),projectTitle()+'_'+speedTag()+'_'+EXPORT_LABEL[mode]+'.wav');
     setStatus(EXPORT_LABEL[mode]+' 음원 저장 완료');
   }
   catch(e){console.error(e);setStatus('음원 저장에 실패했습니다.');alert('음원 파일을 만드는 중 문제가 생겼습니다. 브라우저에서 다시 시도해 주세요.');}
@@ -614,6 +622,8 @@ function drawScoreCanvas(scale=2){
 function exportPng(){if(!confirmStudentInfo())return;try{setStatus('악보 이미지를 만드는 중…');const cv=drawScoreCanvas(2);cv.toBlob(b=>{if(b){downloadBlob(b,projectTitle()+'.png');setStatus('악보 이미지 저장 완료')}},'image/png')}catch(e){console.error(e);setStatus('악보 이미지 저장 실패')}}
 function bindClick(id,fn){const el=document.getElementById(id);if(el)el.onclick=fn;else console.warn('버튼을 찾지 못함:',id)}
 document.getElementById('jangdan').onchange=setJangdan;
+document.getElementById('speed').oninput=function(){speedPct=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
+document.getElementById('speedReset').onclick=resetSpeed;
 bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
 
 // ---- 음원 다운로드 범위 선택 메뉴 ----
