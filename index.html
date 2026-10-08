@@ -82,7 +82,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
   <button type="button" data-mode="janggu">장단만</button>
 </div>
 <div id="status" class="status-bar" role="status" aria-live="polite"></div>
-<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
+<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="playSlow" title="현재 속도의 75%로 전체를 들어봅니다. 저장 음원의 속도는 바뀌지 않습니다.">천천히 들어보기</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
 <script>
 const TORI={
   // 토리별 창작용 음역. 낮은 음을 임의로 추가하지 않고 실제 사용 음역을 기준으로 구성한다.
@@ -169,17 +169,17 @@ const STRENGTH_VOLUME={강:1.20,중:0.90,약:0.60};
 const SUBBEATS_PER_BEAT=3, BARS=8;
 
 // 장단별 기본 BPM + "격자 한 칸"의 체감 속도 보정 계수.
-// 모든 장단은 1장단 안에 박이 있고, 각 박은 3소박으로 구성된다. 세마치는 3박, 나머지는 4박이다.
+// 중모리는 12박, 중중모리·굿거리·자진모리는 3소박 4박, 세마치는 3소박 3박, 휘모리는 2소박 4박이다.
 const JANGDAN_CONFIG={
   // bpm은 실제 박 빠르기, intervalFactor는 그 박 안의 소박 수(1/소박수)를 뜻한다.
   // 소박 길이 = (60000/bpm) / (1÷intervalFactor) = (60000/bpm)*intervalFactor
-  // bpm=기본, min=느리게 끝, max=빠르게 끝 (국립국악원 국악사전 등 문헌상의 한배 범위를 참고)
+  // bpm은 학생 창작용 기본값, min/max는 앱 조절 범위. 문헌의 대표 빠르기와 수업용 설정을 구별한다.
   "중모리":{bpm:85,min:70,max:100,beats:4,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
-  "굿거리":{bpm:70,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
-  "중중모리":{bpm:80,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
+  "굿거리":{bpm:60,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
+  "중중모리":{bpm:65,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
   "세마치":{bpm:75,min:60,max:90,beats:3,cellsPerBar:9,intervalFactor:1/3},        // 3소박×3박, ♩.=60~90
-  "자진모리":{bpm:115,min:90,max:144,beats:4,cellsPerBar:12,intervalFactor:1/3},   // 3소박×4박, ♩.=90~144
-  "휘모리":{bpm:200,min:170,max:230,beats:4,cellsPerBar:8,intervalFactor:1/2}      // 2소박×4박, ♩=약 200~230
+  "자진모리":{bpm:105,min:90,max:144,beats:4,cellsPerBar:12,intervalFactor:1/3},   // 3소박×4박, ♩.=90~144
+  "휘모리":{bpm:180,min:170,max:230,beats:4,cellsPerBar:8,intervalFactor:1/2}      // 2소박×4박. 170~230은 앱에서 정한 조절 범위이며 고정된 표준은 아니다.
 };
 let BEATS_PER_BAR=4, STEPS=BARS*JANGDAN_CONFIG["중모리"].cellsPerBar;
 let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
@@ -489,7 +489,7 @@ const bufferCache=new Map();
 async function decodeDataUrl(u){if(bufferCache.has(u))return bufferCache.get(u);const ctx=await getAudioContext();const ab=await(await fetch(u)).arrayBuffer();const buf=await ctx.decodeAudioData(ab);bufferCache.set(u,buf);return buf}
 async function scheduleBuffer(u,when,volume,rate=1,fall=null){if(!u)return;const ctx=await getAudioContext();const buf=await decodeDataUrl(u);const src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;if(fall)applyFallCurve(src.playbackRate,when,rate,fall);const gain=ctx.createGain();gain.gain.value=volume;src.connect(gain).connect(ctx.destination);src.start(when);scheduledSources.push(src);src.onended=()=>{const i=scheduledSources.indexOf(src);if(i>=0)scheduledSources.splice(i,1)}}
 function stopAll(){playing=false;scheduledSources.forEach(s=>{try{s.stop()}catch(e){}});scheduledSources=[];removePlaybackOutline();if(audioCtx){try{audioCtx.suspend()}catch(e){}}}
-async function play(mode){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
+async function play(mode, speedScale=1){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000/speedScale;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
       if(splitCols.has(c)){
         if(v&&v.a){const d=artData(v.a,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.a.strength||'중'],d.rate,d.fallRate))}
         if(v&&v.b){const d=artData(v.b,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when+step/2,STRENGTH_VOLUME[v.b.strength||'중'],d.rate,d.fallRate))}
@@ -626,7 +626,7 @@ document.getElementById('jangdan').onchange=setJangdan;
 document.getElementById('speed').oninput=function(){speedPct=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
 document.getElementById('speedReset').onclick=resetSpeed;
 updateSpeedUI();
-bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
+bindClick('playSlow',()=>{setStatus('현재 속도의 75%로 전체를 들어봅니다.');play('all',0.75)});bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
 
 // ---- 음원 다운로드 범위 선택 메뉴 ----
 const exportMenu=document.getElementById('exportMenu');
