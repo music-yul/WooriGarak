@@ -46,6 +46,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 @media(max-width:700px){header{min-height:64px;padding:14px 0}.header-inner{padding:0 10px}.main{padding:0 10px}.toolbar{gap:10px}.control select{max-width:145px}.control-end{margin-left:0}.brand{font-size:30px}.header-inner{flex-wrap:wrap;align-items:flex-start;gap:8px 16px}.brand-group{flex-wrap:wrap;gap:2px 14px}.student-fields{flex-wrap:wrap;gap:6px 14px}.student-fields label{font-size:13px}.student-fields input{height:32px;width:88px}.melody-grid{min-width:7000px}.janggu-grid{min-width:7000px}.cell{min-height:40px}.export-menu{bottom:106px;min-width:190px}.status-bar{bottom:106px;font-size:12px;padding:6px 13px}.bottom-bar{max-width:94vw;justify-content:flex-start;overflow-x:auto;padding:10px 12px}.bottom-bar button{flex:0 0 auto}}
 .export-busy{opacity:.6;pointer-events:none}
 .speed-box{display:flex;align-items:center;gap:8px;height:38px}.speed-box span{font-size:12px;color:#8a6a52;font-weight:700}.speed-box input[type=range]{width:130px;accent-color:#a8402c}.speed-box button{padding:6px 10px;font-size:12px}#speedLabel{color:#a8402c}@media(max-width:700px){.speed-box input[type=range]{width:96px}}
+.jangdan-bar-tools{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:5px 8px;box-sizing:border-box}.jangdan-bar-tools.copied{background:#f6e0cf}.jangdan-bar-tools button{font-size:11px;padding:5px 9px;line-height:1.3}.jangdan-bar-tools button:disabled{opacity:.4;cursor:default}.jangdan-copy-hint{font-size:12px;color:#8a6a52;line-height:1.6;padding:0 4px;margin:8px 0 0}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
@@ -62,7 +63,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <div class="toolbar">
 <div class="control"><label>토리</label><select id="tori"><option>경토리</option><option>수심가토리</option><option>육자배기토리</option><option>메나리토리</option></select></div>
 <div class="control"><label>장단</label><select id="jangdan"><option value="중모리">중모리</option><option value="중중모리">중중모리</option><option value="굿거리">굿거리</option><option value="세마치">세마치</option><option value="자진모리">자진모리</option><option value="휘모리">휘모리</option></select></div>
-<div class="control"><label for="speed">속도 · <span id="speedLabel">기본</span></label><div class="speed-box"><span>느리게</span><input type="range" id="speed" min="82" max="118" step="1" value="100" aria-label="속도 조절"><span>빠르게</span><button id="speedReset" type="button">기본</button></div></div>
+<div class="control"><label for="speed">속도 · <span id="speedLabel">기본</span></label><div class="speed-box"><span>느리게</span><input type="range" id="speed" min="-100" max="100" step="1" value="0" aria-label="속도 조절"><span>빠르게</span><button id="speedReset" type="button">기본</button></div></div>
 <div class="control control-end"><label>입력 소리</label><select id="previewToggle"><option value="on">켜기</option><option value="off">끄기</option></select></div>
 </div>
 </section>
@@ -71,7 +72,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 
 
 </section>
-<section class="panel"><div class="panel-title"><span>장단 창작</span><span class="subhint">덩·쿵·덕 등의 주법을 활용하여 변형 장단을 만들어보자.</span><button id="resetBtnJanggu" class="danger">장단 전체 지우기</button></div><div class="palette-row"><div id="jangguPalette" class="palette"></div><div id="jangguStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="grid-wrap"><div id="jangguGrid" class="janggu-grid"></div></div></section>
+<section class="panel"><div class="panel-title"><span>장단 창작</span><span class="subhint">덩·쿵·덕 등의 주법을 활용하여 변형 장단을 만들어보자.</span><button id="resetBtnJanggu" class="danger">장단 전체 지우기</button></div><div class="palette-row"><div id="jangguPalette" class="palette"></div><div id="jangguStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="grid-wrap"><div id="jangguGrid" class="janggu-grid"></div></div><p class="jangdan-copy-hint">한 장단을 입력한 뒤 복사해 다른 장단에 붙여넣으세요. ‘뒤쪽 빈 장단에 반복’은 이미 입력한 장단을 건너뜁니다. 구음과 셈여림을 함께 복사합니다.</p></section>
 
 </main>
 
@@ -82,7 +83,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
   <button type="button" data-mode="janggu">장단만</button>
 </div>
 <div id="status" class="status-bar" role="status" aria-live="polite"></div>
-<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
+<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="playSlow" title="현재 속도의 75%로 전체를 들어봅니다. 저장 음원의 속도는 바뀌지 않습니다.">천천히 들어보기</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
 <script>
 const TORI={
   // 토리별 창작용 음역. 낮은 음을 임의로 추가하지 않고 실제 사용 음역을 기준으로 구성한다.
@@ -169,17 +170,17 @@ const STRENGTH_VOLUME={강:1.20,중:0.90,약:0.60};
 const SUBBEATS_PER_BEAT=3, BARS=8;
 
 // 장단별 기본 BPM + "격자 한 칸"의 체감 속도 보정 계수.
-// 모든 장단은 1장단 안에 박이 있고, 각 박은 3소박으로 구성된다. 세마치는 3박, 나머지는 4박이다.
+// 중모리는 12박, 중중모리·굿거리·자진모리는 3소박 4박, 세마치는 3소박 3박, 휘모리는 2소박 4박이다.
 const JANGDAN_CONFIG={
   // bpm은 실제 박 빠르기, intervalFactor는 그 박 안의 소박 수(1/소박수)를 뜻한다.
   // 소박 길이 = (60000/bpm) / (1÷intervalFactor) = (60000/bpm)*intervalFactor
-  // bpm=기본, min=느리게 끝, max=빠르게 끝 (국립국악원 국악사전 등 문헌상의 한배 범위를 참고)
+  // bpm은 학생 창작용 기본값, min/max는 앱 조절 범위. 문헌의 대표 빠르기와 수업용 설정을 구별한다.
   "중모리":{bpm:85,min:70,max:100,beats:4,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
-  "굿거리":{bpm:70,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
-  "중중모리":{bpm:80,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
+  "굿거리":{bpm:60,min:50,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
+  "중중모리":{bpm:65,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
   "세마치":{bpm:75,min:60,max:90,beats:3,cellsPerBar:9,intervalFactor:1/3},        // 3소박×3박, ♩.=60~90
-  "자진모리":{bpm:115,min:90,max:144,beats:4,cellsPerBar:12,intervalFactor:1/3},   // 3소박×4박, ♩.=90~144
-  "휘모리":{bpm:200,min:170,max:230,beats:4,cellsPerBar:8,intervalFactor:1/2}      // 2소박×4박, ♩=약 200~230
+  "자진모리":{bpm:105,min:90,max:144,beats:4,cellsPerBar:12,intervalFactor:1/3},   // 3소박×4박, ♩.=90~144
+  "휘모리":{bpm:180,min:170,max:230,beats:4,cellsPerBar:8,intervalFactor:1/2}      // 2소박×4박. 170~230은 앱에서 정한 조절 범위이며 고정된 표준은 아니다.
 };
 let BEATS_PER_BAR=4, STEPS=BARS*JANGDAN_CONFIG["중모리"].cellsPerBar;
 let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
@@ -187,11 +188,14 @@ let splitCols=new Set(); // 정간을 둘로 나눈 칸(선율만 해당)의 열
 const jangdanStores={};Object.keys(JANGDAN_CONFIG).forEach(k=>jangdanStores[k]={melody:null,janggu:null,splitCols:null});
 function currentJangdan(){return document.getElementById('jangdan')?.value||'중모리'}
 // 속도 조절: 장단마다 정해 둔 느림~빠름 범위 안에서 조절 (학생 화면에는 숫자를 보이지 않는다)
-let speedPct=100;
-function speedTag(){return speedPct<=93?'느리게':(speedPct>=107?'빠르게':'기본')}
-function updateSpeedUI(){const sl=document.getElementById('speed');if(sl){const c=JANGDAN_CONFIG[currentJangdan()];sl.min=Math.round(c.min/c.bpm*100);sl.max=Math.round(c.max/c.bpm*100);sl.value=speedPct}const lb=document.getElementById('speedLabel');if(lb)lb.textContent=speedTag()}
-function resetSpeed(){speedPct=100;updateSpeedUI()}
-function bpm(){return JANGDAN_CONFIG[currentJangdan()].bpm*speedPct/100}
+let speedPosition=0;
+function speedTag(){return speedPosition<0?'느리게':(speedPosition>0?'빠르게':'기본')}
+function updateSpeedUI(){const sl=document.getElementById('speed');if(sl){sl.min=-100;sl.max=100;sl.value=speedPosition;sl.setAttribute('aria-valuetext',speedTag())}const lb=document.getElementById('speedLabel');if(lb)lb.textContent=speedTag()}
+function resetSpeed(){speedPosition=0;updateSpeedUI();if(playing)setStatus('기본 속도는 다음 재생부터 적용돼요.')}
+function bpm(){
+ const c=JANGDAN_CONFIG[currentJangdan()],position=Math.max(-100,Math.min(100,speedPosition))/100;
+ return position<0?c.bpm+(c.bpm-c.min)*position:c.bpm+(c.max-c.bpm)*position;
+}
 function cellsPerBar(){
   return JANGDAN_CONFIG[currentJangdan()].cellsPerBar;
 }
@@ -334,11 +338,37 @@ function buildMelodyGrid(){
     }
   }
 }
+let jangdanClipboard=null;
+function cloneJangdanCells(cells){return cells.map(value=>value&&typeof value==='object'?{...value}:value)}
+function copyJangdanBar(bar){
+ const size=cellsPerBar(), cells=janggu.slice(bar*size,(bar+1)*size);
+ if(!cells.some(Boolean)){setStatus('먼저 이 장단에 구음을 입력하세요.');return}
+ jangdanClipboard={jangdan:currentJangdan(),bar,cells:cloneJangdanCells(cells)};
+ buildJangguGrid();setStatus((bar+1)+'장단을 복사했습니다. 원하는 장단에 붙여넣으세요.');
+}
+function canPasteJangdan(){return !!(jangdanClipboard&&jangdanClipboard.jangdan===currentJangdan()&&jangdanClipboard.cells.length===cellsPerBar())}
+function pasteJangdanBar(bar){
+ if(!canPasteJangdan())return;
+ const size=cellsPerBar(),start=bar*size;
+ if(janggu.slice(start,start+size).some(Boolean)&&!confirm((bar+1)+'장단의 기존 구음과 셈여림을 복사한 장단으로 바꿀까요?'))return;
+ stopAll();janggu.splice(start,size,...cloneJangdanCells(jangdanClipboard.cells));saveJangdanData();saveDirty=true;buildJangguGrid();setStatus((bar+1)+'장단에 붙여넣었습니다.');
+}
+function repeatJangdanBar(bar){
+ const size=cellsPerBar(),cells=janggu.slice(bar*size,(bar+1)*size);
+ if(!cells.some(Boolean)){setStatus('먼저 이 장단에 구음을 입력하세요.');return}
+ const targets=[];for(let b=bar+1;b<BARS;b++)if(!janggu.slice(b*size,(b+1)*size).some(Boolean))targets.push(b);
+ if(!targets.length){setStatus('뒤쪽에 비어 있는 장단이 없습니다.');return}
+ stopAll();targets.forEach(b=>janggu.splice(b*size,size,...cloneJangdanCells(cells)));saveJangdanData();saveDirty=true;buildJangguGrid();setStatus((bar+1)+'장단을 뒤쪽 빈 장단 '+targets.length+'개에 반복했습니다.');
+}
 function buildJangguGrid(){
  const g=document.getElementById('jangguGrid'), barSteps=cellsPerBar();
- g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
+ g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='64px 22px 22px 44px';g.innerHTML='';
  const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow='4';g.appendChild(jlab);
- for(let b=0;b<BARS;b++){const d=document.createElement('div');d.className='bar-label';d.textContent=(b+1)+'장단';d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
+ for(let b=0;b<BARS;b++){
+ const d=document.createElement('div');d.className='bar-label jangdan-bar-tools'+(canPasteJangdan()&&jangdanClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='3px solid #777';
+ const title=document.createElement('b');title.textContent=(b+1)+'장단';d.appendChild(title);
+ [['복사',()=>copyJangdanBar(b),false],['붙여넣기',()=>pasteJangdanBar(b),!canPasteJangdan()],['뒤쪽 빈 장단에 반복',()=>repeatJangdanBar(b),b===BARS-1]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 '+label);button.onclick=action;d.appendChild(button)});g.appendChild(d)
+ }
  for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.style.borderLeft='3px solid #777';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
  for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
  for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same){const jp=jangguPick(selectedStroke);previewSound(jp.u,STRENGTH_VOLUME[selectedJangguStrength],jp.rate);}buildJangguGrid()};g.appendChild(cell)}
@@ -489,7 +519,7 @@ const bufferCache=new Map();
 async function decodeDataUrl(u){if(bufferCache.has(u))return bufferCache.get(u);const ctx=await getAudioContext();const ab=await(await fetch(u)).arrayBuffer();const buf=await ctx.decodeAudioData(ab);bufferCache.set(u,buf);return buf}
 async function scheduleBuffer(u,when,volume,rate=1,fall=null){if(!u)return;const ctx=await getAudioContext();const buf=await decodeDataUrl(u);const src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;if(fall)applyFallCurve(src.playbackRate,when,rate,fall);const gain=ctx.createGain();gain.gain.value=volume;src.connect(gain).connect(ctx.destination);src.start(when);scheduledSources.push(src);src.onended=()=>{const i=scheduledSources.indexOf(src);if(i>=0)scheduledSources.splice(i,1)}}
 function stopAll(){playing=false;scheduledSources.forEach(s=>{try{s.stop()}catch(e){}});scheduledSources=[];removePlaybackOutline();if(audioCtx){try{audioCtx.suspend()}catch(e){}}}
-async function play(mode){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
+async function play(mode, speedScale=1){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000/speedScale;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
       if(splitCols.has(c)){
         if(v&&v.a){const d=artData(v.a,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.a.strength||'중'],d.rate,d.fallRate))}
         if(v&&v.b){const d=artData(v.b,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when+step/2,STRENGTH_VOLUME[v.b.strength||'중'],d.rate,d.fallRate))}
@@ -623,10 +653,10 @@ function drawScoreCanvas(scale=2){
 function exportPng(){if(!confirmStudentInfo())return;try{setStatus('악보 이미지를 만드는 중…');const cv=drawScoreCanvas(2);cv.toBlob(b=>{if(b){downloadBlob(b,projectTitle()+'.png');setStatus('악보 이미지 저장 완료')}},'image/png')}catch(e){console.error(e);setStatus('악보 이미지 저장 실패')}}
 function bindClick(id,fn){const el=document.getElementById(id);if(el)el.onclick=fn;else console.warn('버튼을 찾지 못함:',id)}
 document.getElementById('jangdan').onchange=setJangdan;
-document.getElementById('speed').oninput=function(){speedPct=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
+document.getElementById('speed').oninput=function(){speedPosition=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
 document.getElementById('speedReset').onclick=resetSpeed;
 updateSpeedUI();
-bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
+bindClick('playSlow',()=>{setStatus('현재 속도의 75%로 전체를 들어봅니다.');play('all',0.75)});bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
 
 // ---- 음원 다운로드 범위 선택 메뉴 ----
 const exportMenu=document.getElementById('exportMenu');
