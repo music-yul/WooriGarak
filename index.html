@@ -46,7 +46,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 @media(max-width:700px){header{min-height:64px;padding:14px 0}.header-inner{padding:0 10px}.main{padding:0 10px}.toolbar{gap:10px}.control select{max-width:145px}.control-end{margin-left:0}.brand{font-size:30px}.header-inner{flex-wrap:wrap;align-items:flex-start;gap:8px 16px}.brand-group{flex-wrap:wrap;gap:2px 14px}.student-fields{flex-wrap:wrap;gap:6px 14px}.student-fields label{font-size:13px}.student-fields input{height:32px;width:88px}.melody-grid{min-width:7000px}.janggu-grid{min-width:7000px}.cell{min-height:40px}.export-menu{bottom:106px;min-width:190px}.status-bar{bottom:106px;font-size:12px;padding:6px 13px}.bottom-bar{max-width:94vw;justify-content:flex-start;overflow-x:auto;padding:10px 12px}.bottom-bar button{flex:0 0 auto}}
 .export-busy{opacity:.6;pointer-events:none}
 .speed-box{display:flex;align-items:center;gap:8px;height:38px}.speed-box span{font-size:12px;color:#8a6a52;font-weight:700}.speed-box input[type=range]{width:130px;accent-color:#a8402c}.speed-box button{padding:6px 10px;font-size:12px}#speedLabel{color:#a8402c}@media(max-width:700px){.speed-box input[type=range]{width:96px}}
-.jangdan-bar-tools{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:5px 8px;box-sizing:border-box}.jangdan-bar-tools.copied{background:#f6e0cf}.jangdan-bar-tools button{font-size:11px;padding:5px 9px;line-height:1.3}.jangdan-bar-tools button:disabled{opacity:.4;cursor:default}.jangdan-copy-hint{font-size:12px;color:#8a6a52;line-height:1.6;padding:0 4px;margin:8px 0 0}
+.jangdan-bar-tools{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:nowrap;padding:0 6px;box-sizing:border-box;overflow:hidden}.jangdan-bar-tools.copied{background:#f6e0cf}.jangdan-bar-tools button{font-size:10px;padding:1px 6px;line-height:16px;height:20px;min-height:0;margin:0;white-space:nowrap;border-radius:4px}.jangdan-bar-tools button:disabled{opacity:.4;cursor:default}.jangdan-copy-hint{font-size:12px;color:#8a6a52;line-height:1.6;padding:0 4px;margin:8px 0 0}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
@@ -72,7 +72,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 
 
 </section>
-<section class="panel"><div class="panel-title"><span>장단 창작</span><span class="subhint">덩·쿵·덕 등의 주법을 활용하여 변형 장단을 만들어보자.</span><button id="resetBtnJanggu" class="danger">장단 전체 지우기</button></div><div class="palette-row"><div id="jangguPalette" class="palette"></div><div id="jangguStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="grid-wrap"><div id="jangguGrid" class="janggu-grid"></div></div><p class="jangdan-copy-hint">한 장단을 입력한 뒤 복사해 다른 장단에 붙여넣으세요. ‘뒤쪽 빈 장단에 반복’은 이미 입력한 장단을 건너뜁니다. 구음과 셈여림을 함께 복사합니다.</p></section>
+<section class="panel"><div class="panel-title"><span>장단 창작</span><span class="subhint">덩·쿵·덕 등의 주법을 활용하여 변형 장단을 만들어보자.</span><button id="resetBtnJanggu" class="danger">장단 전체 지우기</button></div><div class="palette-row"><div id="jangguPalette" class="palette"></div><div id="jangguStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="grid-wrap"><div id="jangguGrid" class="janggu-grid"></div></div><p class="jangdan-copy-hint">한 장단을 입력한 뒤 복사해 다른 장단에 붙여넣으세요. 구음과 셈여림을 함께 복사합니다.</p></section>
 
 </main>
 
@@ -353,21 +353,14 @@ function pasteJangdanBar(bar){
  if(janggu.slice(start,start+size).some(Boolean)&&!confirm((bar+1)+'장단의 기존 구음과 셈여림을 복사한 장단으로 바꿀까요?'))return;
  stopAll();janggu.splice(start,size,...cloneJangdanCells(jangdanClipboard.cells));saveJangdanData();saveDirty=true;buildJangguGrid();setStatus((bar+1)+'장단에 붙여넣었습니다.');
 }
-function repeatJangdanBar(bar){
- const size=cellsPerBar(),cells=janggu.slice(bar*size,(bar+1)*size);
- if(!cells.some(Boolean)){setStatus('먼저 이 장단에 구음을 입력하세요.');return}
- const targets=[];for(let b=bar+1;b<BARS;b++)if(!janggu.slice(b*size,(b+1)*size).some(Boolean))targets.push(b);
- if(!targets.length){setStatus('뒤쪽에 비어 있는 장단이 없습니다.');return}
- stopAll();targets.forEach(b=>janggu.splice(b*size,size,...cloneJangdanCells(cells)));saveJangdanData();saveDirty=true;buildJangguGrid();setStatus((bar+1)+'장단을 뒤쪽 빈 장단 '+targets.length+'개에 반복했습니다.');
-}
 function buildJangguGrid(){
  const g=document.getElementById('jangguGrid'), barSteps=cellsPerBar();
- g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='64px 22px 22px 44px';g.innerHTML='';
+ g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
  const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow='4';g.appendChild(jlab);
  for(let b=0;b<BARS;b++){
  const d=document.createElement('div');d.className='bar-label jangdan-bar-tools'+(canPasteJangdan()&&jangdanClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='3px solid #777';
  const title=document.createElement('b');title.textContent=(b+1)+'장단';d.appendChild(title);
- [['복사',()=>copyJangdanBar(b),false],['붙여넣기',()=>pasteJangdanBar(b),!canPasteJangdan()],['뒤쪽 빈 장단에 반복',()=>repeatJangdanBar(b),b===BARS-1]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 '+label);button.onclick=action;d.appendChild(button)});g.appendChild(d)
+ [['복사',()=>copyJangdanBar(b),false],['붙여넣기',()=>pasteJangdanBar(b),!canPasteJangdan()]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 '+label);button.onclick=action;d.appendChild(button)});g.appendChild(d)
  }
  for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.style.borderLeft='3px solid #777';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
  for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
