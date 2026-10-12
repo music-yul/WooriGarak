@@ -55,7 +55,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .melody-grid .cell .art,.melody-grid .cell .dyn{font-size:8px;bottom:1px}
 .melody-grid .note-label{font-size:12px}
 .melody-input-help{align-self:center;flex:0 1 auto;margin-left:4px;line-height:1.5}
-.range-control{padding:7px 14px;background:#faf3e9;border-top:1px solid #ecdfca}.range-control button{font-size:12px;padding:6px 12px}.range-control button:disabled{opacity:.45;cursor:default}
+.note-range-slot{position:sticky;left:0;z-index:12;background:#f7ede0;display:flex;align-items:center;justify-content:center;border-right:2px solid #d9c3a5}.note-range-slot button{width:22px;height:22px;padding:0;line-height:20px;font-size:19px;border-radius:50%;background:#fff;color:#8b412e}.note-range-slot button:disabled{opacity:.25;cursor:default}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
@@ -77,7 +77,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 </div>
 </section>
 <section class="panel"><div class="panel-title"><span>선율 창작</span><span class="subhint">토리의 구성음을 활용하여 나만의 선율을 만들어 보자.</span><button id="resetBtnMelody" class="danger">선율 전체 지우기</button></div>
-<div class="palette-row"><div id="melodyPalette" class="palette"></div><div id="melodyStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="range-control"><button id="addHighNote" type="button">＋ 높은 음 추가</button></div><div class="grid-wrap"><div id="melodyGrid" class="melody-grid"></div></div><div class="range-control"><button id="addLowNote" type="button">＋ 낮은 음 추가</button></div>
+<div class="palette-row"><div id="melodyPalette" class="palette"></div><div id="melodyStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="grid-wrap"><div id="melodyGrid" class="melody-grid"></div></div>
 
 
 </section>
@@ -271,8 +271,10 @@ function buildRangeButtons(){
   const nextHigh=all[all.indexOf(shown[shown.length-1])+1];
   const nextLow=all[all.indexOf(shown[0])-1];
   high.disabled=!nextHigh;low.disabled=!nextLow;
-  high.textContent=nextHigh?'＋ 높은 음 추가 ('+nextHigh+')':'높은 음 모두 표시됨';
-  low.textContent=nextLow?'＋ 낮은 음 추가 ('+nextLow+')':'낮은 음 모두 표시됨';
+  high.textContent='＋';low.textContent='＋';
+  high.title=nextHigh?'높은 음 추가: '+nextHigh:'높은 음 모두 표시됨';
+  low.title=nextLow?'낮은 음 추가: '+nextLow:'낮은 음 모두 표시됨';
+  high.setAttribute('aria-label',high.title);low.setAttribute('aria-label',low.title);
 }
 function addRangeNote(direction){
   stopAll();saveJangdanData();
@@ -288,23 +290,27 @@ function initMelody(){melody=Array(currentNotes().length).fill(null).map(()=>Arr
 
 // 모든 음을 한눈에 볼 수 있도록 화면 높이와 음 개수에 맞춰 행 높이를 조정한다.
 function melodyRowHeight(count){return Math.max(24,Math.min(34,Math.floor(window.innerHeight*0.42/count)))}
-function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px repeat(${count},${h}px)`;grid.style.minHeight=(66+count*h)+'px'}
+function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px 26px repeat(${count},${h}px) 26px`;grid.style.minHeight=(118+count*h)+'px'}
 window.addEventListener('resize',resizeMelodyRows);
 
 function buildMelodyGrid(){
-  buildRangeButtons();
   const notes=currentNotes();
   const grid=document.getElementById('melodyGrid');
   grid.innerHTML='';
   grid.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;
   const rowHeight=melodyRowHeight(notes.length);
-  grid.style.gridTemplateRows=`22px 22px 22px repeat(${notes.length},${rowHeight}px)`;
+  grid.style.gridTemplateRows=`22px 22px 22px 26px repeat(${notes.length},${rowHeight}px) 26px`;
   grid.style.gridAutoFlow='row';
   grid.style.alignItems='stretch';
-  grid.style.minHeight=(66+notes.length*rowHeight)+'px';
+  grid.style.minHeight=(118+notes.length*rowHeight)+'px';
   grid.style.minWidth=(70+STEPS*74)+'px';
   const corner=document.createElement('div');
   corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow='1 / span 3'; grid.appendChild(corner);
+  [['addHighNote','high',4],['addLowNote','low',notes.length+5]].forEach(([id,direction,row])=>{
+    const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(row);
+    const button=document.createElement('button');button.type='button';button.id=id;button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot);
+  });
+  buildRangeButtons();
   for(let b=0;b<BARS;b++){
     const d=document.createElement('div'); d.className='bar-label'; d.textContent=(b+1)+'장단';
     d.style.gridColumn=`${b*cellsPerBar()+2} / span ${cellsPerBar()}`; d.style.gridRow='1';
@@ -335,10 +341,10 @@ function buildMelodyGrid(){
     const dataR=notes.length-1-r;
     const displayNote=notes[dataR];
     const lab=document.createElement('div'); lab.className='note-label'; lab.textContent=displayNote;
-    lab.style.gridColumn='1'; lab.style.gridRow=String(r+4); grid.appendChild(lab);
+    lab.style.gridColumn='1'; lab.style.gridRow=String(r+5); grid.appendChild(lab);
     for(let c=0;c<STEPS;c++){
       const cell=document.createElement('div'); cell.className='cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%cellsPerBar()===0?' bar-start':'')+(splitCols.has(c)?' split':'');
-      cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+4); cell.dataset.step=String(c);
+      cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+5); cell.dataset.step=String(c);
       if(splitCols.has(c)){
         // 정간을 둘로 나눈 칸: 앞(a)·뒤(b) 절반에 각각 다른 음을 넣을 수 있다.
         const cur=melody[dataR][c]||{};
@@ -801,8 +807,6 @@ function resetJangguOnly(){
 }
 bindClick('resetBtnMelody',resetMelodyOnly);
 bindClick('resetBtnJanggu',resetJangguOnly);
-document.getElementById('addHighNote').onclick=()=>addRangeNote('high');
-document.getElementById('addLowNote').onclick=()=>addRangeNote('low');
 BEATS_PER_BAR=JANGDAN_CONFIG[currentJangdan()].beats;STEPS=BARS*JANGDAN_CONFIG[currentJangdan()].cellsPerBar;initMelody();jangdanStores[currentJangdan()].melody=melody.map(r=>r.slice());jangdanStores[currentJangdan()].janggu=janggu.slice();buildMelodyGrid();buildMelodyPalette();buildJangguPalette();buildStrengthPalette('melodyStrengthPalette','melody');buildStrengthPalette('jangguStrengthPalette','janggu');buildJangguGrid();setStatus(currentJangdan()+' · '+BEATS_PER_BAR+'박 · 8장단');
 
 /* ---- 자동 저장 ----
