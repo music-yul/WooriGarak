@@ -47,6 +47,14 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .export-busy{opacity:.6;pointer-events:none}
 .speed-box{display:flex;align-items:center;gap:8px;height:38px}.speed-box span{font-size:12px;color:#8a6a52;font-weight:700}.speed-box input[type=range]{width:130px;accent-color:#a8402c}.speed-box button{padding:6px 10px;font-size:12px}#speedLabel{color:#a8402c}@media(max-width:700px){.speed-box input[type=range]{width:96px}}
 .jangdan-bar-tools{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:nowrap;padding:0 6px;box-sizing:border-box;overflow:hidden}.jangdan-bar-tools.copied{background:#f6e0cf}.jangdan-bar-tools button{font-size:10px;padding:1px 6px;line-height:16px;height:20px;min-height:0;margin:0;white-space:nowrap;border-radius:4px}.jangdan-bar-tools button:disabled{opacity:.4;cursor:default}
+
+/* 확장 음역 전체 표시: 세로 스크롤 없이 입력 행을 압축한다. */
+.grid-wrap{max-height:none;height:auto;overflow-y:hidden}
+.melody-grid .cell{min-height:0}
+.melody-grid .cell .mark{font-size:13px;transform:translateY(-4px)}
+.melody-grid .cell .art,.melody-grid .cell .dyn{font-size:8px;bottom:1px}
+.melody-grid .note-label{font-size:12px}
+.melody-input-help{align-self:center;flex:0 1 auto;margin-left:4px;line-height:1.5}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
@@ -68,7 +76,6 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 </div>
 </section>
 <section class="panel"><div class="panel-title"><span>선율 창작</span><span class="subhint">토리의 구성음을 활용하여 나만의 선율을 만들어 보자.</span><button id="resetBtnMelody" class="danger">선율 전체 지우기</button></div>
-<p class="subhint" style="margin:8px 0 12px">칸을 더블클릭하면 반으로 나누어 두 음을 입력할 수 있습니다.</p>
 <div class="palette-row"><div id="melodyPalette" class="palette"></div><div id="melodyStrengthPalette" class="palette strength-palette"><span class="strength-label">셈여림</span></div></div><div class="grid-wrap"><div id="melodyGrid" class="melody-grid"></div></div>
 
 
@@ -84,7 +91,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
   <button type="button" data-mode="janggu">장단만</button>
 </div>
 <div id="status" class="status-bar" role="status" aria-live="polite"></div>
-<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="playSlow" title="현재 속도의 75%로 전체를 들어봅니다. 저장 음원의 속도는 바뀌지 않습니다.">천천히 들어보기</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
+<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
 <script>
 const TORI={
   // 토리별 창작용 음역. 낮은 음을 임의로 추가하지 않고 실제 사용 음역을 기준으로 구성한다.
@@ -249,15 +256,22 @@ function stepMs(){
 }
 function currentNotes(){return TORI[document.getElementById('tori').value]||TORI['경토리']}
 function initMelody(){melody=Array(currentNotes().length).fill(null).map(()=>Array(STEPS).fill(null));splitCols=new Set()}
+
+// 모든 음을 한눈에 볼 수 있도록 화면 높이와 음 개수에 맞춰 행 높이를 조정한다.
+function melodyRowHeight(count){return Math.max(24,Math.min(34,Math.floor(window.innerHeight*0.42/count)))}
+function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px repeat(${count},${h}px)`;grid.style.minHeight=(66+count*h)+'px'}
+window.addEventListener('resize',resizeMelodyRows);
+
 function buildMelodyGrid(){
   const notes=currentNotes();
   const grid=document.getElementById('melodyGrid');
   grid.innerHTML='';
   grid.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;
-  grid.style.gridTemplateRows=`22px 22px 22px repeat(${notes.length},40px)`;
+  const rowHeight=melodyRowHeight(notes.length);
+  grid.style.gridTemplateRows=`22px 22px 22px repeat(${notes.length},${rowHeight}px)`;
   grid.style.gridAutoFlow='row';
   grid.style.alignItems='stretch';
-  grid.style.minHeight=(66+notes.length*40)+'px';
+  grid.style.minHeight=(66+notes.length*rowHeight)+'px';
   grid.style.minWidth=(70+STEPS*74)+'px';
   const corner=document.createElement('div');
   corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow='1 / span 3'; grid.appendChild(corner);
@@ -381,6 +395,7 @@ function buildMelodyPalette(){
     b.onclick=()=>{if(b.disabled)return;selectedArt=val;setStatus('선율 입력: '+name);buildMelodyPalette()};
     p.appendChild(b);
   });
+  const help=document.createElement('span');help.className='subhint melody-input-help';help.textContent='칸을 더블클릭하면 반으로 나누어 두 음을 입력할 수 있습니다.';p.appendChild(help);
 }
 function buildJangguPalette(){const p=document.getElementById('jangguPalette');p.innerHTML='';['덩','쿵','덕','덕더','덕덕','기덕','더러러러'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if(name===selectedStroke)b.classList.add('active');b.onclick=()=>{selectedStroke=name;const jp=jangguPick(name);previewSound(jp.u,STRENGTH_VOLUME[selectedJangguStrength],jp.rate);setStatus('장구: '+name+' · 셈여림: '+selectedJangguStrength);buildJangguPalette()};p.appendChild(b)})}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
@@ -655,7 +670,7 @@ document.getElementById('jangdan').onchange=setJangdan;
 document.getElementById('speed').oninput=function(){speedPosition=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
 document.getElementById('speedReset').onclick=resetSpeed;
 updateSpeedUI();
-bindClick('playSlow',()=>{setStatus('현재 속도의 75%로 전체를 들어봅니다.');play('all',0.75)});bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
+bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
 
 // ---- 음원 다운로드 범위 선택 메뉴 ----
 const exportMenu=document.getElementById('exportMenu');
