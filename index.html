@@ -51,11 +51,19 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 /* 확장 음역 전체 표시: 세로 스크롤 없이 입력 행을 압축한다. */
 .grid-wrap{max-height:none;height:auto;overflow-y:hidden}
 .melody-grid .cell{min-height:0}
-.melody-grid .cell .mark{font-size:13px;transform:translateY(-4px)}
+.melody-grid .cell .mark{font-size:14px;font-weight:700;line-height:1;transform:translateY(-4px)}
 .melody-grid .cell .art,.melody-grid .cell .dyn{font-size:8px;bottom:1px}
-.melody-grid .note-label{font-size:12px}
+.melody-grid .note-label{font-size:14px;font-weight:700;line-height:1}
 .melody-input-help{align-self:center;flex:0 1 auto;margin-left:4px;line-height:1.5}
-.note-range-slot{position:sticky;left:0;z-index:12;background:#f7ede0;display:flex;align-items:center;justify-content:center;border-right:2px solid #d9c3a5}.note-range-slot button{width:22px;height:22px;padding:0;line-height:20px;font-size:19px;border-radius:50%;background:#fff;color:#8b412e}.note-range-slot button:disabled{opacity:.25;cursor:default}
+.melody-grid .pitch-name{font-size:14px;font-weight:700;line-height:1}.melody-grid .pitch-octave{font-size:12px;font-weight:500;line-height:1;margin-left:1px}.melody-grid .note-label{justify-content:flex-start;padding-left:28px;box-sizing:border-box;gap:0}.melody-grid .cell .mark{position:absolute;left:calc(50% - 7px);top:calc(50% - 4px);display:inline-flex;align-items:baseline;font-size:14px;font-weight:700;transform:translateY(-50%);white-space:nowrap}.note-range-slot{position:sticky;left:0;z-index:12;background:#f7ede0;border-right:2px solid #d9c3a5;display:flex;align-items:center;padding-left:24px;box-sizing:border-box}.note-add-button{display:flex;align-items:center;justify-content:center;width:22px;height:21px;padding:0;border:0;border-radius:3px;background:transparent;color:#8a6a52;font-size:18px;font-weight:400;line-height:1;box-shadow:none}.note-add-button:hover:not(:disabled){background:#eaddc9;color:#6b2e22}.note-add-button:focus-visible{outline:2px solid #a8402c}.note-add-button:disabled{opacity:.2;cursor:default}.lower-range-band{background:#faf4eb;border-top:1px solid #ecdfca}
+/* 두 입력표의 구분선을 같은 색과 굵기로 통일한다. */
+.melody-grid .corner,.janggu-grid .corner,.melody-grid .note-label,.janggu-grid .note-label,.note-range-slot{border-right:1px solid #d9c3a5}
+.melody-grid .cell,.janggu-grid .j-cell{border-right:1px solid #d9c3a5;border-bottom:1px solid #d9c3a5;box-sizing:border-box}
+.melody-grid .cell.beat-start,.melody-grid .cell.bar-start,.janggu-grid .j-cell.beat-start,.janggu-grid .j-cell.bar-start{border-left:0!important}
+.melody-grid .beat-label,.janggu-grid .beat-label,.melody-grid .bar-label,.janggu-grid .bar-label{border-color:#d9c3a5}
+.melody-grid .cell.split .half{border-right-color:#d9c3a5}
+.lower-range-band{border-top:1px solid #d9c3a5}
+.note-range-slot{padding-left:27px}.note-add-button{width:16px;height:16px;font-size:14px;border-radius:2px}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
@@ -264,6 +272,10 @@ function stepMs(){
   const cfg=JANGDAN_CONFIG[currentJangdan()];
   return (60000/bpm())*cfg.intervalFactor;
 }
+function noteNameParts(label){return {name:label.replace(/[′″↓]/g,''),level:1+(label.match(/′/g)||[]).length+2*(label.match(/″/g)||[]).length-(label.match(/↓/g)||[]).length}}
+function formatNoteName(label){const p=noteNameParts(label),oct=p.level-1;return p.name+(oct<0?','.repeat(-oct):"'".repeat(oct))}
+function paintNoteName(element,label){const p=noteNameParts(label);element.textContent='';const name=document.createElement('span');name.className='pitch-name';name.textContent=p.name;const octave=document.createElement('span');octave.className='pitch-octave';octave.textContent=formatNoteName(label).slice(p.name.length);element.appendChild(name);element.appendChild(octave);element.setAttribute('aria-label',formatNoteName(label))}
+
 function currentNotes(){return visibleToriNotes[currentToriName()]||BASIC_TORI['경토리']}
 function buildRangeButtons(){
   const t=currentToriName(),all=TORI[t],shown=currentNotes();
@@ -272,8 +284,8 @@ function buildRangeButtons(){
   const nextLow=all[all.indexOf(shown[0])-1];
   high.disabled=!nextHigh;low.disabled=!nextLow;
   high.textContent='＋';low.textContent='＋';
-  high.title=nextHigh?'높은 음 추가: '+nextHigh:'높은 음 모두 표시됨';
-  low.title=nextLow?'낮은 음 추가: '+nextLow:'낮은 음 모두 표시됨';
+  high.title=nextHigh?'높은 음 추가: '+formatNoteName(nextHigh):'높은 음 모두 표시됨';
+  low.title=nextLow?'낮은 음 추가: '+formatNoteName(nextLow):'낮은 음 모두 표시됨';
   high.setAttribute('aria-label',high.title);low.setAttribute('aria-label',low.title);
 }
 function addRangeNote(direction){
@@ -290,7 +302,7 @@ function initMelody(){melody=Array(currentNotes().length).fill(null).map(()=>Arr
 
 // 모든 음을 한눈에 볼 수 있도록 화면 높이와 음 개수에 맞춰 행 높이를 조정한다.
 function melodyRowHeight(count){return Math.max(24,Math.min(34,Math.floor(window.innerHeight*0.42/count)))}
-function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px 26px repeat(${count},${h}px) 26px`;grid.style.minHeight=(118+count*h)+'px'}
+function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px repeat(${count},${h}px) 22px`;grid.style.minHeight=(88+count*h)+'px'}
 window.addEventListener('resize',resizeMelodyRows);
 
 function buildMelodyGrid(){
@@ -299,22 +311,19 @@ function buildMelodyGrid(){
   grid.innerHTML='';
   grid.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;
   const rowHeight=melodyRowHeight(notes.length);
-  grid.style.gridTemplateRows=`22px 22px 22px 26px repeat(${notes.length},${rowHeight}px) 26px`;
+  grid.style.gridTemplateRows=`22px 22px 22px repeat(${notes.length},${rowHeight}px) 22px`;
   grid.style.gridAutoFlow='row';
   grid.style.alignItems='stretch';
-  grid.style.minHeight=(118+notes.length*rowHeight)+'px';
+  grid.style.minHeight=(88+notes.length*rowHeight)+'px';
   grid.style.minWidth=(70+STEPS*74)+'px';
   const corner=document.createElement('div');
-  corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow='1 / span 3'; grid.appendChild(corner);
-  [['addHighNote','high',4],['addLowNote','low',notes.length+5]].forEach(([id,direction,row])=>{
-    const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(row);
-    const button=document.createElement('button');button.type='button';button.id=id;button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot);
-  });
-  buildRangeButtons();
+  corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow='1 / span 2'; grid.appendChild(corner);
+  [['addHighNote','high',3],['addLowNote','low',notes.length+4]].forEach(([id,direction,row])=>{const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(row);const button=document.createElement('button');button.type='button';button.id=id;button.className='note-add-button';button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot)});
+  const lowerBand=document.createElement('div');lowerBand.className='lower-range-band';lowerBand.style.gridColumn='2 / -1';lowerBand.style.gridRow=String(notes.length+4);grid.appendChild(lowerBand);
   for(let b=0;b<BARS;b++){
     const d=document.createElement('div'); d.className='bar-label'; d.textContent=(b+1)+'장단';
     d.style.gridColumn=`${b*cellsPerBar()+2} / span ${cellsPerBar()}`; d.style.gridRow='1';
-    if(b>0)d.style.borderLeft='3px solid #777'; grid.appendChild(d);
+    if(b>0)d.style.borderLeft='1px solid #d9c3a5'; grid.appendChild(d);
   }
   for(let b=0;b<BARS;b++){
     for(let p=0;p<BEATS_PER_BAR;p++){
@@ -324,7 +333,7 @@ function buildMelodyGrid(){
       const start=b*cellsPerBar()+p*subbeatsPerBeat()+2;
       d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;
       d.style.gridRow='2';
-      if(p===0)d.style.borderLeft='3px solid #777';
+      if(p===0)d.style.borderLeft='1px solid #d9c3a5';
       d.style.display='flex';
       d.style.alignItems='center';
       d.style.justifyContent='center';
@@ -335,16 +344,17 @@ function buildMelodyGrid(){
     const d=document.createElement('div'); d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');
     const sobak=(c%subbeatsPerBeat())+1;
     d.textContent=sobak+'소박'; d.style.gridColumn=String(c+2); d.style.gridRow='3';
-    if(c%cellsPerBar()===0)d.style.borderLeft='3px solid #777'; grid.appendChild(d);
+    if(c%cellsPerBar()===0)d.style.borderLeft='1px solid #d9c3a5'; grid.appendChild(d);
   }
   for(let r=0;r<notes.length;r++){
     const dataR=notes.length-1-r;
     const displayNote=notes[dataR];
-    const lab=document.createElement('div'); lab.className='note-label'; lab.textContent=displayNote;
-    lab.style.gridColumn='1'; lab.style.gridRow=String(r+5); grid.appendChild(lab);
+    const lab=document.createElement('div'); lab.className='note-label'; paintNoteName(lab,displayNote);
+    lab.style.gridColumn='1'; lab.style.gridRow=String(r+4); grid.appendChild(lab);
+
     for(let c=0;c<STEPS;c++){
       const cell=document.createElement('div'); cell.className='cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%cellsPerBar()===0?' bar-start':'')+(splitCols.has(c)?' split':'');
-      cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+5); cell.dataset.step=String(c);
+      cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+4); cell.dataset.step=String(c);
       if(splitCols.has(c)){
         // 정간을 둘로 나눈 칸: 앞(a)·뒤(b) 절반에 각각 다른 음을 넣을 수 있다.
         const cur=melody[dataR][c]||{};
@@ -352,7 +362,7 @@ function buildMelodyGrid(){
           const hv=cur[half]||null;
           const box=document.createElement('div'); box.className='half half-'+half+(hv?' selected':'');
           if(hv){
-            const m=document.createElement('span'); m.className='mark half-mark'; m.textContent=displayNote; box.appendChild(m);
+            const m=document.createElement('span'); m.className='mark half-mark'; paintNoteName(m,displayNote); box.appendChild(m);
             if(hv.art==='tremolo'||hv.art==='bend'||hv.art==='fall'){const a=document.createElement('span'); a.className='art half-art'; a.textContent=hv.art==='tremolo'?'떠':hv.art==='bend'?'꺾':'흘'; box.appendChild(a)}
           }
           box.onclick=(e)=>{
@@ -370,7 +380,7 @@ function buildMelodyGrid(){
         });
       }else{
         const v=melody[dataR][c];
-        if(v){cell.classList.add('selected'); const m=document.createElement('span'); m.className='mark'; m.textContent=displayNote; cell.appendChild(m); const a=document.createElement('span'); a.className='art'; a.textContent=v.art==='tremolo'?'떠는소리':v.art==='bend'?'꺾는소리':v.art==='fall'?'흘러내림':''; cell.appendChild(a); const st=document.createElement('span'); st.className='dyn'; st.textContent=v.strength||'중'; cell.appendChild(st)}
+        if(v){cell.classList.add('selected'); const m=document.createElement('span'); m.className='mark'; paintNoteName(m,displayNote); cell.appendChild(m); const a=document.createElement('span'); a.className='art'; a.textContent=v.art==='tremolo'?'떠는소리':v.art==='bend'?'꺾는소리':v.art==='fall'?'흘러내림':''; cell.appendChild(a); const st=document.createElement('span'); st.className='dyn'; st.textContent=v.strength||'중'; cell.appendChild(st)}
         // 더블클릭과 헷갈리지 않도록, 한 번 클릭한 뒤 잠깐(240ms) 기다렸다가 두 번째 클릭이 없을 때만 음을 넣거나 뺀다.
         let clickTimer=null;
         cell.onclick=()=>{
@@ -390,6 +400,7 @@ function buildMelodyGrid(){
       grid.appendChild(cell);
     }
   }
+  buildRangeButtons();
 }
 let jangdanClipboard=null;
 function cloneJangdanCells(cells){return cells.map(value=>value&&typeof value==='object'?{...value}:value)}
@@ -411,12 +422,12 @@ function buildJangguGrid(){
  g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
  const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow='4';g.appendChild(jlab);
  for(let b=0;b<BARS;b++){
- const d=document.createElement('div');d.className='bar-label jangdan-bar-tools'+(canPasteJangdan()&&jangdanClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='3px solid #777';
+ const d=document.createElement('div');d.className='bar-label jangdan-bar-tools'+(canPasteJangdan()&&jangdanClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';if(b>0)d.style.borderLeft='1px solid #d9c3a5';
  const title=document.createElement('b');title.textContent=(b+1)+'장단';d.appendChild(title);
  [['복사',()=>copyJangdanBar(b),false],['붙여넣기',()=>pasteJangdanBar(b),!canPasteJangdan()]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 '+label);button.onclick=action;d.appendChild(button)});g.appendChild(d)
  }
- for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.style.borderLeft='3px solid #777';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
- for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='3px solid #777';g.appendChild(d)}
+ for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.style.borderLeft='1px solid #d9c3a5';d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
+ for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.style.borderLeft='1px solid #d9c3a5';g.appendChild(d)}
  for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same){const jp=jangguPick(selectedStroke);previewSound(jp.u,STRENGTH_VOLUME[selectedJangguStrength],jp.rate);}buildJangguGrid()};g.appendChild(cell)}
 }
 function buildStrengthPalette(id,type){const p=document.getElementById(id);const label=p.querySelector('.strength-label');p.innerHTML='';p.appendChild(label);['강','중','약'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if((type==='melody'?selectedMelodyStrength:selectedJangguStrength)===name)b.classList.add('active');b.onclick=()=>{if(type==='melody')selectedMelodyStrength=name;else selectedJangguStrength=name;setStatus((type==='melody'?'선율 셈여림: ':'장구 셈여림: ')+name);buildStrengthPalette(id,type)};p.appendChild(b)})}
@@ -690,11 +701,11 @@ function drawScoreCanvas(scale=2){
     for(let c=0;c<STEPS;c+=sb)ctx.fillText(((c%cfg.cellsPerBar)/sb+1)+'박',x0+c*cell+(sb/2)*cell,105);
   }
   ctx.textAlign='right';ctx.font='bold 15px sans-serif';
-  for(let r=0;r<rows;r++){const dataR=rows-1-r;const y=y0+38+r*rowH;ctx.fillStyle='#fff';ctx.fillRect(0,y,left,rowH);ctx.fillStyle='#111';ctx.fillText(notes[dataR],left-12,y+34);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%subbeatsPerBeat()===0?'#aaa':'#ddd')));ctx.strokeRect(x,y,cell,rowH);const v=melody[dataR][c];
+  for(let r=0;r<rows;r++){const dataR=rows-1-r;const y=y0+38+r*rowH;ctx.fillStyle='#fff';ctx.fillRect(0,y,left,rowH);ctx.fillStyle='#111';ctx.fillText(formatNoteName(notes[dataR]),left-12,y+34);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%subbeatsPerBeat()===0?'#aaa':'#ddd')));ctx.strokeRect(x,y,cell,rowH);const v=melody[dataR][c];
     if(splitCols.has(c)){
       ctx.strokeStyle='#cf8a5f';ctx.beginPath();ctx.moveTo(x+cell/2,y+4);ctx.lineTo(x+cell/2,y+rowH-4);ctx.stroke();
-      if(v&&v.a){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(notes[dataR],x+cell*0.27,y+24);ctx.font='bold 9px sans-serif';ctx.fillText(v.a.strength||'중',x+cell*0.27,y+40)}
-      if(v&&v.b){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(notes[dataR],x+cell*0.73,y+24);ctx.font='bold 9px sans-serif';ctx.fillText(v.b.strength||'중',x+cell*0.73,y+40)}
+      if(v&&v.a){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(formatNoteName(notes[dataR]),x+cell*0.27,y+24);ctx.font='bold 9px sans-serif';ctx.fillText(v.a.strength||'중',x+cell*0.27,y+40)}
+      if(v&&v.b){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(formatNoteName(notes[dataR]),x+cell*0.73,y+24);ctx.font='bold 9px sans-serif';ctx.fillText(v.b.strength||'중',x+cell*0.73,y+40)}
     }else if(v){ctx.textAlign='center';ctx.font='bold 12px sans-serif';ctx.fillText(v.note,x+cell/2,y+25);ctx.font='bold 11px sans-serif';ctx.fillText(v.strength||'중',x+cell/2,y+45)}
   }}
   const jy=y0+38+rows*rowH;ctx.textAlign='right';ctx.font='bold 15px sans-serif';ctx.fillText('장구',left-12,jy+35);for(let c=0;c<STEPS;c++){const x=x0+c*cell;ctx.strokeStyle=(c%cellsPerBar()===0?'#666':(currentJangdan()==='중모리'?'#ddd':(c%subbeatsPerBeat()===0?'#aaa':'#ddd')));ctx.strokeRect(x,jy,cell,jangH);const v=janggu[c];if(v){ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillText(v.stroke||v,x+cell/2,jy+25);ctx.font='bold 11px sans-serif';ctx.fillText(v.strength||'중',x+cell/2,jy+45)}}
