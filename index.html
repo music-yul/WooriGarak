@@ -106,8 +106,8 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .melody-grid,.janggu-grid{display:grid;grid-auto-flow:row}
 .corner{position:sticky;left:0;z-index:12;background:var(--grid-paper);border-right:1px solid var(--grid-line)}
 .beat-label,.bar-label,.note-label{display:flex;align-items:center;justify-content:center;font-size:12px}
-.beat-label{color:#a1846a;border-bottom:1px solid var(--grid-line)}
-.bar-label{font-weight:700;color:#6b2e22;background:var(--grid-paper);border-bottom:1px solid var(--grid-line)}
+.beat-label{color:#a1846a;border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);box-sizing:border-box}
+.bar-label{font-weight:700;color:#6b2e22;background:var(--grid-paper);border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);box-sizing:border-box}
 .note-label{position:sticky;left:0;z-index:10;font-weight:700;background:var(--grid-paper);color:#6b2e22;border-right:1px solid var(--grid-line)}
 .cell,.j-cell{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;background:rgba(255,255,255,.7);border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);box-sizing:border-box;min-height:0}
 .j-cell{font-size:12px}
@@ -170,11 +170,11 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 <div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
 <script>
 const TORI={
-  // 토리별 창작용 음역. 낮은 음을 임의로 추가하지 않고 실제 사용 음역을 기준으로 구성한다.
-  "경토리":["솔","라","도′","레′","미′","솔′","라′","도″"],
-  "수심가토리":["라↓","레","미","솔","라","도′","레′","미′","솔′","라′","도″"],
-  "육자배기토리":["미","라","시","도′","미′","라′"],
-  "메나리토리":["미","솔","라","도′","레′","미′","솔′","라′","도″","레″"]
+  // 기본음은 간단히 표시하고, 선택 가능한 최대 음역은 창작용으로 넉넉히 준비한다.
+  "경토리":["솔↓","라↓","도","레","미","솔","라","도′","레′","미′","솔′","라′","도″","레″","미″"],
+  "수심가토리":["레↓","미↓","솔↓","라↓","도","레","미","솔","라","도′","레′","미′","솔′","라′","도″"],
+  "육자배기토리":["라↓","시↓","도","미","라","시","도′","미′","라′","시′","도″"],
+  "메나리토리":["라↓","도","레","미","솔","라","도′","레′","미′","솔′","라′","도″","레″"]
 };
 // 처음에는 기본음만 표시하고 필요할 때 한 음씩 확장한다.
 const BASIC_TORI={
@@ -190,18 +190,13 @@ const NOTE_AUDIO={"솔": "data:audio/wav;base64,UklGRsiZBABXQVZFZm10IBAAAAABAAIA
 
 // ---- 토리별 실제 사용 음역 + 시김새(기본/떠는 음/꺾는 음) 재생 헬퍼 ----
 // 같은 구성음을 옥타브 위아래로 확장한다. 라↓는 낮은 라이다.
-// 경토리의 고음은 기존 실음 샘플을 옥타브 위로 올려 재생한다.
-const HIGH_NOTE_SOURCE={"솔′":"솔","라′":"라","도″":"도′","레″":"레′"};
-const HIGH_NOTE_RATE=2;
-// 수심가토리의 '레'는 '레′' 샘플을 옥타브 아래로 내려 재생한다.
-const LOW_NOTE_SOURCE={"레":"레′","라↓":"라"};
-const LOW_NOTE_RATE=0.5;
+// 확장음은 가장 가까운 기본 음원을 변환해 재생한다.
 const BASE_SEMITONE={'도':0,'레':2,'미':4,'솔':7,'라':9,'시':11};
 // 시김새는 실제 그 토리·그 음에서만 쓰인다. (떠는 소리: 육자배기의 미, 수심가의 라 / 꺾는 소리: 육자배기의 시 / 흘러내리는 소리: 수심가의 도′)
 const ARTIC_ALLOWED={
-  tremolo:[{tori:'육자배기토리',note:'미'},{tori:'수심가토리',note:'라'},{tori:'수심가토리',note:'라′'}],
-  bend:[{tori:'육자배기토리',note:'시'}],
-  fall:[{tori:'수심가토리',note:'도′'},{tori:'수심가토리',note:'도″'}]
+  tremolo:[...['미','미′'].map(note=>({tori:'육자배기토리',note})),...['라↓','라','라′'].map(note=>({tori:'수심가토리',note}))],
+  bend:['시↓','시','시′'].map(note=>({tori:'육자배기토리',note})),
+  fall:['도','도′','도″'].map(note=>({tori:'수심가토리',note}))
 };
 function currentToriName(){return document.getElementById('tori').value}
 function articAllowed(artKey,tori,note){
@@ -219,16 +214,16 @@ function semitoneOfPlain(label){
   return (BASE_SEMITONE[base]??0)+oct*12;
 }
 function semitoneOf(label){
-  if(HIGH_NOTE_SOURCE[label])return semitoneOfPlain(HIGH_NOTE_SOURCE[label])+12;
   return semitoneOfPlain(label);
 }
 // 기본음: 실음 샘플이 있으면 그대로, 고음 확장음은 기존 샘플을 옥타브 위로 올려 재생.
 function basicAudioAndRate(label){
-  if(HIGH_NOTE_SOURCE[label])return {u:NOTE_AUDIO[HIGH_NOTE_SOURCE[label]],rate:HIGH_NOTE_RATE};
-  if(LOW_NOTE_SOURCE[label])return {u:NOTE_AUDIO[LOW_NOTE_SOURCE[label]],rate:LOW_NOTE_RATE};
   if(NOTE_AUDIO[label])return {u:NOTE_AUDIO[label],rate:1};
-  if(label==='시'){const ratio=Math.pow(2,(semitoneOfPlain('시')-semitoneOfPlain('도′'))/12);return {u:NOTE_AUDIO['도′'],rate:ratio}}
-  return {u:null,rate:1};
+  const target=semitoneOfPlain(label);
+  const samples=['솔','라','도′','레′','미′','미'];
+  let best=samples[0];
+  samples.forEach(note=>{if(Math.abs(semitoneOfPlain(note)-target)<Math.abs(semitoneOfPlain(best)-target))best=note});
+  return {u:NOTE_AUDIO[best],rate:Math.pow(2,(target-semitoneOfPlain(best))/12)};
 }
 // 떠는 음/꺾는 음: 실제 녹음(라·미=떠는 음, 시=꺾는 음)을 기준으로, 다른 음은 반음 차이만큼 피치를 조정해 재생.
 const TREMOLO_ANCHORS=[{label:'라',u:NOTE_AUDIO['라(떠는 소리)']},{label:'미',u:NOTE_AUDIO['미(떠는 소리)']}];
@@ -240,7 +235,7 @@ function ornamentAudioAndRate(label,anchors){
   return {u:best.u,rate:Math.pow(2,(target-semitoneOfPlain(best.label))/12)};
 }
 function resolveMelodyAudio(note,art){
-  if(art==='tremolo')return ornamentAudioAndRate(note,TREMOLO_ANCHORS);
+  if(art==='tremolo'){const anchor=currentToriName()==='수심가토리'?TREMOLO_ANCHORS.filter(a=>a.label==='라'):TREMOLO_ANCHORS.filter(a=>a.label==='미');return ornamentAudioAndRate(note,anchor)}
   if(art==='bend')return ornamentAudioAndRate(note,BEND_ANCHORS);
   if(art==='fall'){const b=basicAudioAndRate(note);return {u:b.u,rate:b.rate,fallRate:b.rate*Math.pow(2,-1/12)}}
   return basicAudioAndRate(note);
@@ -354,7 +349,7 @@ function addRangeNote(direction){
   if(!next)return;
   const expanded=direction==='high'?[...old,next]:[next,...old];
   Object.keys(jangdanStores).forEach(k=>{const st=jangdanStores[k];if(!st.melody)return;const columns=JANGDAN_CONFIG[k].cellsPerBar*BARS;st.melody=expanded.map(note=>{const i=old.indexOf(note);return i<0?Array(columns).fill(null):st.melody[i].slice()});st.notes=expanded.slice()});
-  visibleToriNotes[t]=expanded;applyJangdanData();buildMelodyGrid();buildMelodyPalette();setStatus(next+' 추가 · 기존 가락은 그대로 유지됩니다.');
+  visibleToriNotes[t]=expanded;applyJangdanData();buildMelodyGrid();buildMelodyPalette();setStatus(formatNoteName(next)+' 추가 · 기존 가락은 그대로 유지됩니다.');
 }
 
 function initMelody(){melody=Array(currentNotes().length).fill(null).map(()=>Array(STEPS).fill(null));splitCols=new Set()}
@@ -911,7 +906,8 @@ function restoreState(d){
   const legacy={"경토리":["솔","라","도′","레′","미′","솔′","라′","도″"],"수심가토리":["레","미","솔","라","도′","레′"],"육자배기토리":["미","라","시","도′","미′","라′"],"메나리토리":["미","솔","라","도′","레′","미′"]};
   const stores=Object.values(d.stores||{}).filter(st=>st&&st.melody);
   const count=stores.reduce((n,st)=>Math.max(n,st.melody.length),0);
-  const savedNotes=Array.isArray(d.notes)?d.notes:count===all.length?all:legacy[currentToriName()].length===count?legacy[currentToriName()]:BASIC_TORI[currentToriName()];
+  const previousWide={"경토리":["솔","라","도′","레′","미′","솔′","라′","도″"],"수심가토리":["라↓","레","미","솔","라","도′","레′","미′","솔′","라′","도″"],"육자배기토리":["미","라","시","도′","미′","라′"],"메나리토리":["미","솔","라","도′","레′","미′","솔′","라′","도″","레″"]};
+  const savedNotes=Array.isArray(d.notes)?d.notes:count===all.length?all:previousWide[currentToriName()].length===count?previousWide[currentToriName()]:legacy[currentToriName()].length===count?legacy[currentToriName()]:BASIC_TORI[currentToriName()];
   visibleToriNotes[currentToriName()]=savedNotes.filter((note,i)=>all.includes(note)&&savedNotes.indexOf(note)===i);
   if(!visibleToriNotes[currentToriName()].length)visibleToriNotes[currentToriName()]=BASIC_TORI[currentToriName()].slice();
   const janSel=document.getElementById('jangdan');
