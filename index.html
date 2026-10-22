@@ -48,6 +48,8 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .export-menu .menu-title{font-size:12px;color:#8a6a52;font-weight:700;text-align:center;padding:2px 0 6px}
 .export-menu button{width:100%;font-weight:700;padding:11px 13px}
 .export-menu button:hover{background:#fbf3e6}
+.range-pickers{display:flex;gap:10px;justify-content:center;padding:0 0 4px}.range-pickers label{display:flex;align-items:center;gap:5px;font-size:12px;color:#8a6a52;font-weight:700}.range-pickers select{height:32px;border:1px solid #d9c3a5;border-radius:7px;padding:0 6px;background:#fff;color:#2b241f;font:inherit}
+.melody-bar-tools{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:nowrap;padding:0 6px;box-sizing:border-box;overflow:hidden}.melody-bar-tools.copied{background:#f6e0cf}.melody-bar-tools button{font-size:10px;padding:1px 6px;line-height:16px;height:20px;min-height:0;margin:0;white-space:nowrap;border-radius:4px}.melody-bar-tools button:disabled{opacity:.4;cursor:default}
 .status-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:104px;z-index:29;max-width:90vw;padding:7px 16px;border-radius:999px;background:rgba(107,46,34,.93);color:#fff8f5;font-size:13px;font-weight:700;letter-spacing:.2px;text-align:center;box-shadow:0 4px 14px rgba(107,46,34,.22);pointer-events:none;opacity:0;transition:opacity .25s ease}
 .status-bar.show{opacity:1}
 .bottom-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:auto;background:rgba(255,252,246,.97);border:1px solid #e8dcc8;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 18px;z-index:30;box-shadow:0 6px 20px rgba(107,46,34,.12)}
@@ -55,7 +57,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .primary{font-weight:800;background:#a8402c;color:#fff;border-color:#a8402c}
 .danger{color:#a3452e;border-color:#e2c3b6;background:#fff8f5}
 .playback-column-outline{position:absolute;pointer-events:none;box-sizing:border-box;border:3px solid #a8402c;border-radius:5px;background:transparent!important;z-index:50;will-change:transform;}
-@media(max-width:1080px){.brand{font-size:40px}
+@media(max-width:1080px){.bottom-bar{max-width:94vw;justify-content:flex-start;overflow-x:auto;padding:10px 12px}.bottom-bar button{flex:0 0 auto}.brand{font-size:40px}
 .brand-group{gap:32px}
 .student-fields{gap:20px}
 .student-fields input{width:98px}}
@@ -160,6 +162,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 
 </main>
 
+<div id="playRangeMenu" class="export-menu" role="dialog" aria-label="구간 듣기 설정"><div class="menu-title">들을 구간과 소리를 선택하세요</div><div class="range-pickers"><label>시작 <select id="playRangeStart"><option value="1" selected>1장단</option><option value="2">2장단</option><option value="3">3장단</option><option value="4">4장단</option><option value="5">5장단</option><option value="6">6장단</option><option value="7">7장단</option><option value="8">8장단</option></select></label><label>끝 <select id="playRangeEnd"><option value="1">1장단</option><option value="2">2장단</option><option value="3">3장단</option><option value="4">4장단</option><option value="5">5장단</option><option value="6">6장단</option><option value="7">7장단</option><option value="8" selected>8장단</option></select></label></div><button type="button" data-range-mode="all">전체 (선율+장구)</button><button type="button" data-range-mode="melody">선율만</button><button type="button" data-range-mode="janggu">장구만</button></div>
 <div id="exportMenu" class="export-menu" role="menu" aria-labelledby="exportWav">
   <div class="menu-title">어떤 음원을 저장할까요?</div>
   <button type="button" data-mode="all">전체 (선율+장단)</button>
@@ -167,7 +170,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
   <button type="button" data-mode="janggu">장단만</button>
 </div>
 <div id="status" class="status-bar" role="status" aria-live="polite"></div>
-<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="stop">■ 정지</button><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
+<div class="bottom-bar"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play">▶</button><button id="stop">■ 정지</button><button id="playRange">구간 듣기</button><button id="saveWorkfile">작업 파일 저장</button><button id="loadWorkfile">작업 파일 불러오기</button><input id="workfileInput" type="file" accept=".json,application/json" hidden><button id="exportWav">🎧 음원 다운로드</button><button id="exportPng">🖼 악보 다운로드</button></div>
 <script>
 const TORI={
   // 기본음은 간단히 표시하고, 선택 가능한 최대 음역은 창작용으로 넉넉히 준비한다.
@@ -262,7 +265,7 @@ const JANGDAN_CONFIG={
   // bpm은 실제 박 빠르기, intervalFactor는 그 박 안의 소박 수(1/소박수)를 뜻한다.
   // 소박 길이 = (60000/bpm) / (1÷intervalFactor) = (60000/bpm)*intervalFactor
   // bpm은 학생 창작용 기본값, min/max는 앱 조절 범위. 문헌의 대표 빠르기와 수업용 설정을 구별한다.
-  "중모리":{bpm:85,min:70,max:100,beats:4,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
+  "중모리":{bpm:85,min:70,max:100,beats:12,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
   "굿거리":{bpm:60,min:50,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
   "중중모리":{bpm:65,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
   "세마치":{bpm:75,min:60,max:90,beats:3,cellsPerBar:9,intervalFactor:1/3},        // 3소박×3박, ♩.=60~90
@@ -356,28 +359,31 @@ function initMelody(){melody=Array(currentNotes().length).fill(null).map(()=>Arr
 
 // 모든 음을 한눈에 볼 수 있도록 화면 높이와 음 개수에 맞춰 행 높이를 조정한다.
 function melodyRowHeight(count){return Math.max(24,Math.min(34,Math.floor(window.innerHeight*0.42/count)))}
-function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px repeat(${count},${h}px) 22px`;grid.style.minHeight=(88+count*h)+'px'}
+function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count),showSubbeats=currentJangdan()!=='중모리';grid.style.gridTemplateRows=showSubbeats?`22px 22px 22px repeat(${count},${h}px) 22px`:`22px 22px repeat(${count},${h}px) 22px`;grid.style.minHeight=((showSubbeats?88:66)+count*h)+'px'}
 window.addEventListener('resize',resizeMelodyRows);
 
+let melodyClipboard=null;
+function cloneMelodyValue(v){if(!v)return null;if(Object.prototype.hasOwnProperty.call(v,'a')||Object.prototype.hasOwnProperty.call(v,'b'))return {a:v.a?{...v.a}:null,b:v.b?{...v.b}:null};return {...v}}
+function copyMelodyBar(bar){const size=cellsPerBar(),start=bar*size,end=start+size,cells=melody.map(row=>row.slice(start,end).map(cloneMelodyValue));if(!cells.some(row=>row.some(Boolean))){setStatus('먼저 이 장단에 선율을 입력하세요.');return}melodyClipboard={tori:currentToriName(),jangdan:currentJangdan(),notes:currentNotes().slice(),size,cells,splitCols:[...splitCols].filter(c=>c>=start&&c<end).map(c=>c-start),bar};buildMelodyGrid();setStatus((bar+1)+'장단 선율을 복사했습니다. 원하는 장단에 붙여넣으세요.')}
+function canPasteMelody(){return !!(melodyClipboard&&melodyClipboard.tori===currentToriName()&&melodyClipboard.jangdan===currentJangdan()&&melodyClipboard.size===cellsPerBar()&&JSON.stringify(melodyClipboard.notes)===JSON.stringify(currentNotes()))}
+function pasteMelodyBar(bar){if(!canPasteMelody())return;const size=cellsPerBar(),start=bar*size,end=start+size,occupied=melody.some(row=>row.slice(start,end).some(Boolean))||[...splitCols].some(c=>c>=start&&c<end);if(occupied&&!confirm((bar+1)+'장단의 기존 선율을 복사한 선율로 바꿀까요?'))return;stopAll();melody=melody.map((row,r)=>row.slice(0,start).concat(melodyClipboard.cells[r].map(cloneMelodyValue),row.slice(end)));splitCols=new Set([...splitCols].filter(c=>c<start||c>=end).concat(melodyClipboard.splitCols.map(c=>start+c)));saveJangdanData();saveDirty=true;buildMelodyGrid();setStatus((bar+1)+'장단에 선율을 붙여넣었습니다.')}
 function buildMelodyGrid(){
   const notes=currentNotes();
   const grid=document.getElementById('melodyGrid');
   grid.innerHTML='';
   grid.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;
-  const rowHeight=melodyRowHeight(notes.length);
-  grid.style.gridTemplateRows=`22px 22px 22px repeat(${notes.length},${rowHeight}px) 22px`;
+  const rowHeight=melodyRowHeight(notes.length),showSubbeats=currentJangdan()!=='중모리',firstNoteRow=showSubbeats?4:3,bottomRow=firstNoteRow+notes.length;
+  grid.style.gridTemplateRows=showSubbeats?`22px 22px 22px repeat(${notes.length},${rowHeight}px) 22px`:`22px 22px repeat(${notes.length},${rowHeight}px) 22px`;
   grid.style.gridAutoFlow='row';
   grid.style.alignItems='stretch';
-  grid.style.minHeight=(88+notes.length*rowHeight)+'px';
+  grid.style.minHeight=((showSubbeats?88:66)+notes.length*rowHeight)+'px';
   grid.style.minWidth=(70+STEPS*74)+'px';
   const corner=document.createElement('div');
-  corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow='1 / span 2'; grid.appendChild(corner);
-  [['addHighNote','high',3],['addLowNote','low',notes.length+4]].forEach(([id,direction,row])=>{const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(row);const button=document.createElement('button');button.type='button';button.id=id;button.className='note-add-button';button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot)});
-  const lowerBand=document.createElement('div');lowerBand.className='lower-range-band';lowerBand.style.gridColumn='2 / -1';lowerBand.style.gridRow=String(notes.length+4);grid.appendChild(lowerBand);
+  corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow=showSubbeats?'1 / span 2':'1'; grid.appendChild(corner);
+  [['addHighNote','high',showSubbeats?3:2],['addLowNote','low',bottomRow]].forEach(([id,direction,row])=>{const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(row);const button=document.createElement('button');button.type='button';button.id=id;button.className='note-add-button';button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot)});
+  const lowerBand=document.createElement('div');lowerBand.className='lower-range-band';lowerBand.style.gridColumn='2 / -1';lowerBand.style.gridRow=String(bottomRow);grid.appendChild(lowerBand);
   for(let b=0;b<BARS;b++){
-    const d=document.createElement('div'); d.className='bar-label'; d.textContent=(b+1)+'장단';
-    d.style.gridColumn=`${b*cellsPerBar()+2} / span ${cellsPerBar()}`; d.style.gridRow='1';
-    d.classList.add('bar-boundary'); grid.appendChild(d);
+    const d=document.createElement('div');d.className='bar-label melody-bar-tools'+(canPasteMelody()&&melodyClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*cellsPerBar()+2} / span ${cellsPerBar()}`;d.style.gridRow='1';d.classList.add('bar-boundary');const title=document.createElement('b');title.textContent=(b+1)+'장단';d.appendChild(title);[['복사',()=>copyMelodyBar(b),false],['붙여넣기',()=>pasteMelodyBar(b),!canPasteMelody()]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 선율 '+label);button.onclick=action;d.appendChild(button)});grid.appendChild(d);
   }
   for(let b=0;b<BARS;b++){
     for(let p=0;p<BEATS_PER_BAR;p++){
@@ -394,21 +400,16 @@ function buildMelodyGrid(){
       grid.appendChild(d);
     }
   }
-  for(let c=0;c<STEPS;c++){
-    const d=document.createElement('div'); d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');
-    const sobak=(c%subbeatsPerBeat())+1;
-    d.textContent=sobak+'소박'; d.style.gridColumn=String(c+2); d.style.gridRow='3';
-    if(c%cellsPerBar()===0)d.classList.add('bar-boundary'); grid.appendChild(d);
-  }
+  if(showSubbeats){for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');const sobak=(c%subbeatsPerBeat())+1;d.textContent=sobak+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%cellsPerBar()===0)d.classList.add('bar-boundary');grid.appendChild(d)}}
   for(let r=0;r<notes.length;r++){
     const dataR=notes.length-1-r;
     const displayNote=notes[dataR];
     const lab=document.createElement('div'); lab.className='note-label'; paintNoteName(lab,displayNote);
-    lab.style.gridColumn='1'; lab.style.gridRow=String(r+4); grid.appendChild(lab);
+    lab.style.gridColumn='1'; lab.style.gridRow=String(r+firstNoteRow); grid.appendChild(lab);
 
     for(let c=0;c<STEPS;c++){
       const cell=document.createElement('div'); cell.className='cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%cellsPerBar()===0?' bar-start':'')+(splitCols.has(c)?' split':'');
-      cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+4); cell.dataset.step=String(c);
+      cell.style.gridColumn=String(c+2); cell.style.gridRow=String(r+firstNoteRow); cell.dataset.step=String(c);
       if(splitCols.has(c)){
         // 정간을 둘로 나눈 칸: 앞(a)·뒤(b) 절반에 각각 다른 음을 넣을 수 있다.
         const cur=melody[dataR][c]||{};
@@ -473,16 +474,16 @@ function pasteJangdanBar(bar){
 }
 function buildJangguGrid(){
  const g=document.getElementById('jangguGrid'), barSteps=cellsPerBar();
- g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
- const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow='4';g.appendChild(jlab);
+ const showSubbeats=currentJangdan()!=='중모리';g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows=showSubbeats?'22px 22px 22px 44px':'22px 22px 44px';g.innerHTML='';
+ const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow=showSubbeats?'1 / span 3':'1 / span 2';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow=showSubbeats?'4':'3';g.appendChild(jlab);
  for(let b=0;b<BARS;b++){
  const d=document.createElement('div');d.className='bar-label jangdan-bar-tools'+(canPasteJangdan()&&jangdanClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';d.classList.add('bar-boundary');
  const title=document.createElement('b');title.textContent=(b+1)+'장단';d.appendChild(title);
  [['복사',()=>copyJangdanBar(b),false],['붙여넣기',()=>pasteJangdanBar(b),!canPasteJangdan()]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 '+label);button.onclick=action;d.appendChild(button)});g.appendChild(d)
  }
  for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.classList.add('bar-boundary');d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
- for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.classList.add('bar-boundary');g.appendChild(d)}
- for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same){const jp=jangguPick(selectedStroke);previewSound(jp.u,STRENGTH_VOLUME[selectedJangguStrength],jp.rate);}buildJangguGrid()};g.appendChild(cell)}
+ if(showSubbeats)for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.classList.add('bar-boundary');g.appendChild(d)}
+ for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow=showSubbeats?'4':'3';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same){const jp=jangguPick(selectedStroke);previewSound(jp.u,STRENGTH_VOLUME[selectedJangguStrength],jp.rate);}buildJangguGrid()};g.appendChild(cell)}
 }
 function buildStrengthPalette(id,type){const p=document.getElementById(id);const label=p.querySelector('.strength-label');p.innerHTML='';p.appendChild(label);['강','중','약'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if((type==='melody'?selectedMelodyStrength:selectedJangguStrength)===name)b.classList.add('active');b.onclick=()=>{if(type==='melody')selectedMelodyStrength=name;else selectedJangguStrength=name;setStatus((type==='melody'?'선율 셈여림: ':'장구 셈여림: ')+name);buildStrengthPalette(id,type)};p.appendChild(b)})}
 function buildMelodyPalette(){
@@ -512,6 +513,7 @@ let playbackRaf=null;
 let playbackStartTime=0;
 let playbackStepSec=0;
 let playbackModeSteps=0;
+let playbackBaseStep=0;
 let followEnabled=true;
 let followResumeTimer=null;
 
@@ -592,12 +594,13 @@ function followTrack(t,pos){
  * 직접 계산한다. 따라서 브라우저 렌더링이 한 프레임 늦거나 빨라도 음악과 따로
  * 느려지거나 빨라지지 않는다.
  */
-function startPlaybackIndicator(audioStartTime, stepSec){
+function startPlaybackIndicator(audioStartTime, stepSec, rangeSteps=STEPS, baseStep=0){
   followEnabled=true;
   if(!setupPlaybackOutline())return;
   playbackStartTime=audioStartTime;
   playbackStepSec=stepSec;
-  playbackModeSteps=STEPS;
+  playbackModeSteps=rangeSteps;
+  playbackBaseStep=baseStep;
 
   const ctx=audioCtx;
   function frame(){
@@ -610,8 +613,8 @@ function startPlaybackIndicator(audioStartTime, stepSec){
     const maxStep=playbackModeSteps-1;
     const pos=elapsed<0?0:Math.min(maxStep,Math.max(0,elapsed/playbackStepSec));
     playbackTracks.forEach(t=>{
-      t.outline.style.transform='translate3d('+(pos*t.stepWidth)+'px,0,0)';
-      followTrack(t,pos);
+      t.outline.style.transform='translate3d('+((pos+playbackBaseStep)*t.stepWidth)+'px,0,0)';
+      followTrack(t,pos+playbackBaseStep);
     });
     if(elapsed<=playbackModeSteps*playbackStepSec+0.05){
       playbackRaf=requestAnimationFrame(frame);
@@ -631,12 +634,7 @@ const bufferCache=new Map();
 async function decodeDataUrl(u){if(bufferCache.has(u))return bufferCache.get(u);const ctx=await getAudioContext();const ab=await(await fetch(u)).arrayBuffer();const buf=await ctx.decodeAudioData(ab);bufferCache.set(u,buf);return buf}
 async function scheduleBuffer(u,when,volume,rate=1,fall=null){if(!u)return;const ctx=await getAudioContext();const buf=await decodeDataUrl(u);const src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;if(fall)applyFallCurve(src.playbackRate,when,rate,fall);const gain=ctx.createGain();gain.gain.value=volume;src.connect(gain).connect(ctx.destination);src.start(when);scheduledSources.push(src);src.onended=()=>{const i=scheduledSources.indexOf(src);if(i>=0)scheduledSources.splice(i,1)}}
 function stopAll(){playing=false;scheduledSources.forEach(s=>{try{s.stop()}catch(e){}});scheduledSources=[];removePlaybackOutline();if(audioCtx){try{audioCtx.suspend()}catch(e){}}}
-async function play(mode){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
-      if(splitCols.has(c)){
-        if(v&&v.a){const d=artData(v.a,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.a.strength||'중'],d.rate,d.fallRate))}
-        if(v&&v.b){const d=artData(v.b,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when+step/2,STRENGTH_VOLUME[v.b.strength||'중'],d.rate,d.fallRate))}
-      }else{const d=artData(v);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.strength||'중'],d.rate,d.fallRate))}
-    }}if(mode!=='melody'){const stroke=janggu[c];const strokeName=stroke&&(stroke.stroke||stroke);if(strokeName&&JANGGU_AUDIO[strokeName]){const jp=jangguPick(strokeName);jobs.push(scheduleBuffer(jp.u,when-jangguAdvance(strokeName,jp.rate),STRENGTH_VOLUME[(stroke.strength||'중')],jp.rate))}}}await Promise.all(jobs);const token=++playToken;await sleep((STEPS*step+lead)*1000);if(token===playToken)playing=false}
+async function play(mode='all',range=null){stopAll();const from=range?Math.max(0,Math.min(STEPS,range.start)):0,to=range?Math.max(from,Math.min(STEPS,range.end)):STEPS;if(to<=from){setStatus('재생할 구간을 확인해 주세요.');return}const ctx=await getAudioContext();playing=true;const step=stepMs()/1000,lead=.15,start=ctx.currentTime+lead;startPlaybackIndicator(start,step,to-from,from);const jobs=[];for(let c=from;c<to;c++){const when=start+(c-from)*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];if(splitCols.has(c)){if(v&&v.a){const d=artData(v.a,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.a.strength||'중'],d.rate,d.fallRate))}if(v&&v.b){const d=artData(v.b,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when+step/2,STRENGTH_VOLUME[v.b.strength||'중'],d.rate,d.fallRate))}}else{const d=artData(v);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.strength||'중'],d.rate,d.fallRate))}}}if(mode!=='melody'){const stroke=janggu[c],strokeName=stroke&&(stroke.stroke||stroke);if(strokeName&&JANGGU_AUDIO[strokeName]){const jp=jangguPick(strokeName);jobs.push(scheduleBuffer(jp.u,when-jangguAdvance(strokeName,jp.rate),STRENGTH_VOLUME[stroke.strength||'중'],jp.rate))}}}await Promise.all(jobs);const token=++playToken;await sleep(((to-from)*step+lead)*1000);if(token===playToken)playing=false}
 
 
 let statusTimer=null;
@@ -684,7 +682,7 @@ function studentInfo(){
 function confirmStudentInfo(){
   const {id,name}=studentInfo();
   if(id&&name)return true;
-  return confirm('학번과 이름이 입력되지 않았습니다.\n이대로 저장하면 파일 이름과 악보에 학번·이름이 표시되지 않습니다.\n\n그대로 저장할까요?');
+  alert('다운로드하려면 학번과 이름을 모두 입력해 주세요.');document.getElementById(id?'studentName':'studentId')?.focus();return false;
 }
 function projectTitle(){
   const {id,name}=studentInfo();
@@ -771,7 +769,7 @@ document.getElementById('jangdan').onchange=setJangdan;
 document.getElementById('speed').oninput=function(){speedPosition=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
 document.getElementById('speedReset').onclick=resetSpeed;
 updateSpeedUI();
-bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);
+bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);bindClick('exportPng',exportPng);bindClick('playRange',()=>{document.getElementById('exportMenu').classList.remove('open');document.getElementById('playRangeMenu').classList.toggle('open')});bindClick('saveWorkfile',saveWorkfile);bindClick('loadWorkfile',()=>document.getElementById('workfileInput').click());document.getElementById('workfileInput').addEventListener('change',e=>loadWorkfile(e.target.files&&e.target.files[0]));const rangeStart=document.getElementById('playRangeStart'),rangeEnd=document.getElementById('playRangeEnd');rangeStart.value='1';rangeEnd.value=String(BARS);rangeStart.addEventListener('change',()=>{if(Number(rangeStart.value)>Number(rangeEnd.value))rangeEnd.value=rangeStart.value});rangeEnd.addEventListener('change',()=>{if(Number(rangeEnd.value)<Number(rangeStart.value))rangeStart.value=rangeEnd.value});document.querySelectorAll('[data-range-mode]').forEach(button=>button.addEventListener('click',()=>{const from=(Number(rangeStart.value)-1)*cellsPerBar(),to=Number(rangeEnd.value)*cellsPerBar();document.getElementById('playRangeMenu').classList.remove('open');play(button.dataset.rangeMode,{start:from,end:to})}));
 
 // ---- 음원 다운로드 범위 선택 메뉴 ----
 const exportMenu=document.getElementById('exportMenu');
@@ -780,7 +778,7 @@ function setExportMenu(open){
   exportMenu.classList.toggle('open',open);
   if(open)setStatus('');
 }
-bindClick('exportWav',()=>setExportMenu(!exportMenu.classList.contains('open')));
+bindClick('exportWav',()=>{document.getElementById('playRangeMenu').classList.remove('open');setExportMenu(!exportMenu.classList.contains('open'))});
 exportMenu.querySelectorAll('button[data-mode]').forEach(b=>{
   b.onclick=()=>{setExportMenu(false);exportWav(b.dataset.mode)};
 });
@@ -789,7 +787,8 @@ document.addEventListener('click',e=>{
   if(exportMenu.contains(e.target)||e.target.closest('#exportWav'))return;
   setExportMenu(false);
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape')setExportMenu(false)});
+document.addEventListener('click',e=>{const menu=document.getElementById('playRangeMenu');if(menu.classList.contains('open')&&!menu.contains(e.target)&&!e.target.closest('#playRange'))menu.classList.remove('open')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){setExportMenu(false);document.getElementById('playRangeMenu').classList.remove('open')}});
 
 // ---- 입력 시 소리 켜기/끄기 ----
 const previewToggle=document.getElementById('previewToggle');
@@ -874,91 +873,15 @@ bindClick('resetBtnMelody',resetMelodyOnly);
 bindClick('resetBtnJanggu',resetJangguOnly);
 BEATS_PER_BAR=JANGDAN_CONFIG[currentJangdan()].beats;STEPS=BARS*JANGDAN_CONFIG[currentJangdan()].cellsPerBar;initMelody();jangdanStores[currentJangdan()].melody=melody.map(r=>r.slice());jangdanStores[currentJangdan()].janggu=janggu.slice();buildMelodyGrid();buildMelodyPalette();buildJangguPalette();buildStrengthPalette('melodyStrengthPalette','melody');buildStrengthPalette('jangguStrengthPalette','janggu');buildJangguGrid();setStatus(currentJangdan()+' · '+BEATS_PER_BAR+'박 · 8장단');
 
-/* ---- 자동 저장 ----
- * 1.5초마다 변경 사항을 이 브라우저에 저장한다. 새로고침·절전·실수로 인한 작업 손실을 막는다.
- * 공용 컴퓨터를 고려해, 다음 사람이 열었을 때 자동으로 덮어쓰지 않고 불러올지 먼저 묻는다.
- */
-const SAVE_KEY='woorigarak_save_v1';
-let saveDirty=false;
+/* ---- 탭이 열려 있는 동안 임시 저장 ---- */
+const SAVE_KEY='woorigarak_temp_v2',LEGACY_SAVE_KEY='woorigarak_save_v1';let saveDirty=false;
+function workState(){saveJangdanData();return {format:'woorigarak-workfile',version:1,at:Date.now(),id:document.getElementById('studentId')?.value||'',name:document.getElementById('studentName')?.value||'',tori:currentToriName(),notes:currentNotes().slice(),jangdan:currentJangdan(),speedPosition,stores:JSON.parse(JSON.stringify(jangdanStores))}}
+function saveState(){try{sessionStorage.setItem(SAVE_KEY,JSON.stringify(workState()))}catch(e){}}
+function saveWorkfile(){if(!confirmStudentInfo())return;try{const data=workState();downloadBlob(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),projectTitle()+'_작업파일.json');setStatus('작업 파일을 저장했습니다.')}catch(e){alert('작업 파일을 저장하지 못했습니다.')}}
+async function loadWorkfile(file){if(!file)return;try{if(file.size>10*1024*1024)throw new Error('작업 파일은 10MB 이하만 불러올 수 있습니다.');const data=JSON.parse(await file.text());if(!data||data.format!=='woorigarak-workfile'||!data.stores||!TORI[data.tori]||!JANGDAN_CONFIG[data.jangdan])throw new Error('우리 가락 짓기 작업 파일이 아닙니다.');const current=studentInfo(),incoming={id:sanitizeForFile(data.id),name:sanitizeForFile(data.name)};if((current.id&&current.id!==incoming.id)||(current.name&&current.name!==incoming.name))throw new Error('현재 입력한 학번·이름과 작업 파일의 학번·이름이 다릅니다.');restoreState(data);saveDirty=true;saveState();setStatus('작업 파일을 불러왔습니다.')}catch(e){alert(e.message||'작업 파일을 불러오지 못했습니다.')}finally{const input=document.getElementById('workfileInput');if(input)input.value=''}}
+function restoreTempState(){try{let raw=sessionStorage.getItem(SAVE_KEY);if(!raw){const legacy=localStorage.getItem(LEGACY_SAVE_KEY);if(legacy){raw=legacy;sessionStorage.setItem(SAVE_KEY,legacy);localStorage.removeItem(LEGACY_SAVE_KEY)}}if(!raw)return;const data=JSON.parse(raw);if(data&&data.stores){restoreState(data);setStatus('이 탭에서 임시 저장한 작업을 복구했습니다.')}}catch(e){console.warn('임시 저장 작업을 복구하지 못했습니다.',e)}}
+document.addEventListener('click',()=>{saveDirty=true},true);document.addEventListener('input',()=>{saveDirty=true},true);document.addEventListener('change',()=>{saveDirty=true},true);setInterval(()=>{if(saveDirty){saveDirty=false;saveState()}},1000);window.addEventListener('beforeunload',()=>{if(saveDirty)saveState()});restoreTempState();
 
-function saveState(){
-  try{
-    saveJangdanData();
-    localStorage.setItem(SAVE_KEY,JSON.stringify({
-      at:Date.now(),
-      id:document.getElementById('studentId')?.value||'',
-      name:document.getElementById('studentName')?.value||'',
-      tori:document.getElementById('tori')?.value||'',
-      notes:currentNotes().slice(),
-      jangdan:currentJangdan(),
-      stores:jangdanStores
-    }));
-  }catch(e){/* 저장 공간이 없거나 시크릿 모드인 경우 조용히 넘어간다 */}
-}
-
-function restoreState(d){
-  const idEl=document.getElementById('studentId'), nameEl=document.getElementById('studentName');
-  if(idEl)idEl.value=d.id||'';
-  if(nameEl)nameEl.value=d.name||'';
-  const toriSel=document.getElementById('tori');
-  if(d.tori&&TORI[d.tori]){toriSel.value=d.tori;lastTori=d.tori;}
-  const all=TORI[currentToriName()];
-  const legacy={"경토리":["솔","라","도′","레′","미′","솔′","라′","도″"],"수심가토리":["레","미","솔","라","도′","레′"],"육자배기토리":["미","라","시","도′","미′","라′"],"메나리토리":["미","솔","라","도′","레′","미′"]};
-  const stores=Object.values(d.stores||{}).filter(st=>st&&st.melody);
-  const count=stores.reduce((n,st)=>Math.max(n,st.melody.length),0);
-  const previousWide={"경토리":["솔","라","도′","레′","미′","솔′","라′","도″"],"수심가토리":["라↓","레","미","솔","라","도′","레′","미′","솔′","라′","도″"],"육자배기토리":["미","라","시","도′","미′","라′"],"메나리토리":["미","솔","라","도′","레′","미′","솔′","라′","도″","레″"]};
-  const savedNotes=Array.isArray(d.notes)?d.notes:count===all.length?all:previousWide[currentToriName()].length===count?previousWide[currentToriName()]:legacy[currentToriName()].length===count?legacy[currentToriName()]:BASIC_TORI[currentToriName()];
-  visibleToriNotes[currentToriName()]=savedNotes.filter((note,i)=>all.includes(note)&&savedNotes.indexOf(note)===i);
-  if(!visibleToriNotes[currentToriName()].length)visibleToriNotes[currentToriName()]=BASIC_TORI[currentToriName()].slice();
-  const janSel=document.getElementById('jangdan');
-  if(d.jangdan&&JANGDAN_CONFIG[d.jangdan])janSel.value=d.jangdan;
-  Object.keys(jangdanStores).forEach(k=>{
-    const v=d.stores&&d.stores[k];
-    jangdanStores[k]=(v&&v.melody)?{melody:currentNotes().map(note=>{const source=(v.notes||savedNotes).indexOf(note);return source>=0&&v.melody[source]?v.melody[source]:Array(JANGDAN_CONFIG[k].cellsPerBar*BARS).fill(null)}),janggu:v.janggu||Array(JANGDAN_CONFIG[k].cellsPerBar*BARS).fill(null),splitCols:v.splitCols||[],notes:currentNotes().slice()}:{melody:null,janggu:null,splitCols:[]};
-  });
-  const cfg=JANGDAN_CONFIG[currentJangdan()];
-  BEATS_PER_BAR=cfg.beats;
-  STEPS=BARS*cfg.cellsPerBar;
-  applyJangdanData();
-  buildMelodyGrid();
-  buildMelodyPalette();
-  buildJangguGrid();
-}
-
-function askRestore(){
-  let raw=null;
-  try{raw=localStorage.getItem(SAVE_KEY)}catch(e){return}
-  if(!raw)return;
-  let d=null;
-  try{d=JSON.parse(raw)}catch(e){return}
-  if(!d||!d.stores)return;
-  const has=Object.keys(d.stores).some(k=>{
-    const st=d.stores[k];
-    if(!st)return false;
-    const m=st.melody&&st.melody.some(row=>row&&row.some(x=>x));
-    const j=st.janggu&&st.janggu.some(x=>x);
-    return !!(m||j);
-  });
-  if(!has)return;
-  const who=[d.id,d.name].filter(Boolean).join(' ')||'학번·이름 미입력';
-  const t=new Date(d.at||Date.now());
-  const two=n=>String(n).padStart(2,'0');
-  const when=(t.getMonth()+1)+'월 '+t.getDate()+'일 '+two(t.getHours())+':'+two(t.getMinutes());
-  if(confirm('이 컴퓨터에 저장된 작업이 있습니다.\n\n  '+who+'\n  '+when+' 저장\n\n불러올까요?\n[취소]를 누르면 저장된 내용을 지우고 새로 시작합니다.')){
-    restoreState(d);
-    setStatus('저장된 작업을 불러왔습니다.');
-  }else{
-    try{localStorage.removeItem(SAVE_KEY)}catch(e){}
-    setStatus('새로 시작합니다.');
-  }
-}
-
-document.addEventListener('click',()=>{saveDirty=true},true);
-document.addEventListener('input',()=>{saveDirty=true},true);
-document.addEventListener('change',()=>{saveDirty=true},true);
-setInterval(()=>{if(saveDirty){saveDirty=false;saveState()}},1500);
-window.addEventListener('beforeunload',()=>{if(saveDirty)saveState()});
-askRestore();
 
 </script>
 </body></html>
