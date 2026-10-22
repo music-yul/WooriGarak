@@ -138,11 +138,15 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .note-add-button:disabled{opacity:.2;cursor:default}
 .lower-range-band{background:#faf4eb;border-top:1px solid var(--grid-line)}
 .melody-grid .bar-label,.melody-grid .beat-label,.janggu-grid .bar-label,.janggu-grid .beat-label{box-sizing:border-box;min-width:0}
+
+.bottom-bar{flex-wrap:wrap}
+.bottom-bar-group[aria-label="구간"] select{padding:7px 5px;font-size:13px}
+@media(max-width:700px){.bottom-bar-group[aria-label="구간"]{flex-basis:100%}.bottom-bar{bottom:8px;gap:6px}.status-bar{bottom:150px}}
 </style></head><body>
 <header><div class="header-inner">
 <div class="brand-group">
 <div class="brand">우리 가락 짓기</div>
-<div class="ver">v4.6<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
+<div class="ver">v4.7<br>© 2026 율쌤. 무단 복제 및 배포 금지</div>
 </div>
 <div class="student-fields">
 <span class="field"><label for="studentId">학번</label><input id="studentId" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></span>
@@ -178,7 +182,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
   <div class="menu-help">한꺼번에 다운로드하면 음원·악보·작업파일이 각각 저장됩니다. ZIP 파일로 묶이지 않습니다.</div>
 </div>
 <div id="status" class="status-bar" role="status" aria-live="polite"></div>
-<div class="bottom-bar"><div class="bottom-bar-group" aria-label="재생"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play" aria-label="함께 재생">▶</button><button id="stop">■ 정지</button></div><div class="bottom-bar-group" aria-label="저장"><button id="downloadMenuButton" aria-expanded="false" aria-controls="exportMenu">⬇ 다운로드</button></div></div>
+<div class="bottom-bar"><div class="bottom-bar-group" aria-label="구간"><label for="rangeStart">구간</label><select id="rangeStart" aria-label="시작 장단"></select><span>~</span><select id="rangeEnd" aria-label="끝 장단"></select><button id="rangeReset" type="button">전체</button></div><div class="bottom-bar-group" aria-label="재생"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play" aria-label="함께 재생">▶</button><button id="stop">■ 정지</button></div><div class="bottom-bar-group" aria-label="저장"><button id="downloadMenuButton" aria-expanded="false" aria-controls="exportMenu">⬇ 다운로드</button></div></div>
 <script>
 const TORI={
   // 기본음은 간단히 표시하고, 선택 가능한 최대 음역은 창작용으로 넉넉히 준비한다.
@@ -273,7 +277,7 @@ const JANGDAN_CONFIG={
   // bpm은 실제 박 빠르기, intervalFactor는 그 박 안의 소박 수(1/소박수)를 뜻한다.
   // 소박 길이 = (60000/bpm) / (1÷intervalFactor) = (60000/bpm)*intervalFactor
   // bpm은 학생 창작용 기본값, min/max는 앱 조절 범위. 문헌의 대표 빠르기와 수업용 설정을 구별한다.
-  "중모리":{bpm:85,min:70,max:100,beats:4,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
+  "중모리":{bpm:85,min:70,max:100,beats:12,cellsPerBar:12,intervalFactor:1},        // 12박, ♩=70~100
   "굿거리":{bpm:60,min:50,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},       // 3소박×4박, ♩.=60~90
   "중중모리":{bpm:65,min:60,max:90,beats:4,cellsPerBar:12,intervalFactor:1/3},     // 3소박×4박, ♩.=50~90 (대표 80~90)
   "세마치":{bpm:75,min:60,max:90,beats:3,cellsPerBar:9,intervalFactor:1/3},        // 3소박×3박, ♩.=60~90
@@ -282,6 +286,7 @@ const JANGDAN_CONFIG={
 };
 let BEATS_PER_BAR=4, STEPS=BARS*JANGDAN_CONFIG["중모리"].cellsPerBar;
 let melody=[], janggu=Array(STEPS).fill(null), playing=false, playToken=0;
+let melodyClipboard=null;
 let splitCols=new Set(); // 정간을 둘로 나눈 칸(선율만 해당)의 열 번호
 const jangdanStores={};Object.keys(JANGDAN_CONFIG).forEach(k=>jangdanStores[k]={melody:null,janggu:null,splitCols:null});
 function currentJangdan(){return document.getElementById('jangdan')?.value||'중모리'}
@@ -367,7 +372,7 @@ function initMelody(){melody=Array(currentNotes().length).fill(null).map(()=>Arr
 
 // 모든 음을 한눈에 볼 수 있도록 화면 높이와 음 개수에 맞춰 행 높이를 조정한다.
 function melodyRowHeight(count){return Math.max(24,Math.min(34,Math.floor(window.innerHeight*0.42/count)))}
-function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px 22px repeat(${count},${h}px) 22px`;grid.style.minHeight=(88+count*h)+'px'}
+function resizeMelodyRows(){const grid=document.getElementById('melodyGrid');if(!grid)return;const count=currentNotes().length;const h=melodyRowHeight(count);grid.style.gridTemplateRows=`22px 22px ${currentJangdan()==='중모리'?'0px':'22px'} repeat(${count},${h}px) 22px`;grid.style.minHeight=((currentJangdan()==='중모리'?66:88)+count*h)+'px'}
 window.addEventListener('resize',resizeMelodyRows);
 
 function buildMelodyGrid(){
@@ -376,19 +381,19 @@ function buildMelodyGrid(){
   grid.innerHTML='';
   grid.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;
   const rowHeight=melodyRowHeight(notes.length);
-  grid.style.gridTemplateRows=`22px 22px 22px repeat(${notes.length},${rowHeight}px) 22px`;
+  grid.style.gridTemplateRows=`22px 22px ${currentJangdan()==='중모리'?'0px':'22px'} repeat(${notes.length},${rowHeight}px) 22px`;
   grid.style.gridAutoFlow='row';
   grid.style.alignItems='stretch';
-  grid.style.minHeight=(88+notes.length*rowHeight)+'px';
+  grid.style.minHeight=((currentJangdan()==='중모리'?66:88)+notes.length*rowHeight)+'px';
   grid.style.minWidth=(70+STEPS*74)+'px';
   const corner=document.createElement('div');
-  corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow='1 / span 2'; grid.appendChild(corner);
-  [['addHighNote','high',3],['addLowNote','low',notes.length+4]].forEach(([id,direction,row])=>{const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(row);const button=document.createElement('button');button.type='button';button.id=id;button.className='note-add-button';button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot)});
+  corner.className='corner'; corner.style.gridColumn='1'; corner.style.gridRow=currentJangdan()==='중모리'?'1':'1 / span 2'; grid.appendChild(corner);
+  [['addHighNote','high',3],['addLowNote','low',notes.length+4]].forEach(([id,direction,row])=>{const slot=document.createElement('div');slot.className='note-range-slot';slot.style.gridColumn='1';slot.style.gridRow=String(direction==='high'&&currentJangdan()==='중모리'?2:row);const button=document.createElement('button');button.type='button';button.id=id;button.className='note-add-button';button.textContent='＋';button.onclick=()=>addRangeNote(direction);slot.appendChild(button);grid.appendChild(slot)});
   const lowerBand=document.createElement('div');lowerBand.className='lower-range-band';lowerBand.style.gridColumn='2 / -1';lowerBand.style.gridRow=String(notes.length+4);grid.appendChild(lowerBand);
   for(let b=0;b<BARS;b++){
     const d=document.createElement('div'); d.className='bar-label'; d.textContent=(b+1)+'장단';
     d.style.gridColumn=`${b*cellsPerBar()+2} / span ${cellsPerBar()}`; d.style.gridRow='1';
-    d.classList.add('bar-boundary'); grid.appendChild(d);
+    d.classList.add('bar-boundary'); addMelodyBarTools(d,b); grid.appendChild(d);
   }
   for(let b=0;b<BARS;b++){
     for(let p=0;p<BEATS_PER_BAR;p++){
@@ -405,7 +410,7 @@ function buildMelodyGrid(){
       grid.appendChild(d);
     }
   }
-  for(let c=0;c<STEPS;c++){
+  if(currentJangdan()!=='중모리')for(let c=0;c<STEPS;c++){
     const d=document.createElement('div'); d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');
     const sobak=(c%subbeatsPerBeat())+1;
     d.textContent=sobak+'소박'; d.style.gridColumn=String(c+2); d.style.gridRow='3';
@@ -467,6 +472,31 @@ function buildMelodyGrid(){
   }
   buildRangeButtons();
 }
+
+function canPasteMelody(){return !!(melodyClipboard&&melodyClipboard.jangdan===currentJangdan()&&melodyClipboard.notes.join('|')===currentNotes().join('|'))}
+function copyMelodyBar(bar){
+ const size=cellsPerBar(),start=bar*size;
+ melodyClipboard={jangdan:currentJangdan(),notes:currentNotes().slice(),cells:JSON.parse(JSON.stringify(melody.map(row=>row.slice(start,start+size)))),split:[...splitCols].filter(c=>c>=start&&c<start+size).map(c=>c-start)};
+ buildMelodyGrid();setStatus((bar+1)+'장단 선율을 복사했습니다.');
+}
+function pasteMelodyBar(bar){
+ if(!canPasteMelody())return;
+ const size=cellsPerBar(),start=bar*size;
+ if(melody.some(row=>row.slice(start,start+size).some(Boolean))&&!confirm((bar+1)+'장단의 선율을 복사한 선율로 바꿀까요?'))return;
+ stopAll();
+ const copied=JSON.parse(JSON.stringify(melodyClipboard.cells));
+ melody.forEach((row,r)=>row.splice(start,size,...copied[r]));
+ for(let c=start;c<start+size;c++)splitCols.delete(c);
+ melodyClipboard.split.forEach(c=>splitCols.add(start+c));
+ saveJangdanData();saveDirty=true;buildMelodyGrid();setStatus((bar+1)+'장단에 선율을 붙여넣었습니다.');
+}
+function addMelodyBarTools(d,bar){
+ d.classList.add('jangdan-bar-tools');
+ [['복사',()=>copyMelodyBar(bar),false],['붙여넣기',()=>pasteMelodyBar(bar),!canPasteMelody()]].forEach(([label,action,disabled])=>{
+ const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(bar+1)+'장단 선율 '+label);button.onclick=action;d.appendChild(button);
+ });
+}
+
 let jangdanClipboard=null;
 function cloneJangdanCells(cells){return cells.map(value=>value&&typeof value==='object'?{...value}:value)}
 function copyJangdanBar(bar){
@@ -484,7 +514,7 @@ function pasteJangdanBar(bar){
 }
 function buildJangguGrid(){
  const g=document.getElementById('jangguGrid'), barSteps=cellsPerBar();
- g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows='22px 22px 22px 44px';g.innerHTML='';
+ g.style.gridTemplateColumns=`70px repeat(${STEPS},74px)`;g.style.minWidth=(70+STEPS*74)+'px';g.style.gridTemplateRows=currentJangdan()==='중모리'?'22px 22px 0px 44px':'22px 22px 22px 44px';g.innerHTML='';
  const corner=document.createElement('div');corner.className='corner';corner.style.gridColumn='1';corner.style.gridRow='1 / span 3';g.appendChild(corner);const jlab=document.createElement('div');jlab.className='note-label';jlab.textContent='장구';jlab.style.gridColumn='1';jlab.style.gridRow='4';g.appendChild(jlab);
  for(let b=0;b<BARS;b++){
  const d=document.createElement('div');d.className='bar-label jangdan-bar-tools'+(canPasteJangdan()&&jangdanClipboard.bar===b?' copied':'');d.style.gridColumn=`${b*barSteps+2} / span ${barSteps}`;d.style.gridRow='1';d.classList.add('bar-boundary');
@@ -492,7 +522,7 @@ function buildJangguGrid(){
  [['복사',()=>copyJangdanBar(b),false],['붙여넣기',()=>pasteJangdanBar(b),!canPasteJangdan()]].forEach(([label,action,disabled])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.setAttribute('aria-label',(b+1)+'장단 '+label);button.onclick=action;d.appendChild(button)});g.appendChild(d)
  }
  for(let b=0;b<BARS;b++){for(let p=0;p<BEATS_PER_BAR;p++){const d=document.createElement('div');d.className='beat-label beat-group-label';d.textContent=(p+1)+'박';const start=b*barSteps+p*subbeatsPerBeat()+2;d.style.gridColumn=`${start} / span ${subbeatsPerBeat()}`;d.style.gridRow='2';if(p===0)d.classList.add('bar-boundary');d.style.display='flex';d.style.alignItems='center';d.style.justifyContent='center';g.appendChild(d)}}
- for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.classList.add('bar-boundary');g.appendChild(d)}
+ if(currentJangdan()!=='중모리')for(let c=0;c<STEPS;c++){const d=document.createElement('div');d.className='beat-label'+(c%subbeatsPerBeat()===0?' beat-start':'');d.textContent=((c%subbeatsPerBeat())+1)+'소박';d.style.gridColumn=String(c+2);d.style.gridRow='3';if(c%barSteps===0)d.classList.add('bar-boundary');g.appendChild(d)}
  for(let c=0;c<STEPS;c++){const cell=document.createElement('div');cell.className='j-cell'+(c%subbeatsPerBeat()===0?' beat-start':'')+(c%barSteps===0?' bar-start':'');cell.style.gridColumn=String(c+2);cell.style.gridRow='4';cell.dataset.step=String(c);if(janggu[c]){cell.textContent=janggu[c].stroke||janggu[c];cell.classList.add('selected');const st=document.createElement('span');st.className='j-strength';st.textContent=janggu[c].strength||'중';cell.appendChild(st)}cell.onclick=()=>{const same=!!(janggu[c]&&janggu[c].stroke===selectedStroke&&janggu[c].strength===selectedJangguStrength);janggu[c]=same?null:{stroke:selectedStroke,strength:selectedJangguStrength};if(!same){const jp=jangguPick(selectedStroke);previewSound(jp.u,STRENGTH_VOLUME[selectedJangguStrength],jp.rate);}buildJangguGrid()};g.appendChild(cell)}
 }
 function buildStrengthPalette(id,type){const p=document.getElementById(id);const label=p.querySelector('.strength-label');p.innerHTML='';p.appendChild(label);['강','중','약'].forEach(name=>{const b=document.createElement('button');b.textContent=name;if((type==='melody'?selectedMelodyStrength:selectedJangguStrength)===name)b.classList.add('active');b.onclick=()=>{if(type==='melody')selectedMelodyStrength=name;else selectedJangguStrength=name;setStatus((type==='melody'?'선율 셈여림: ':'장구 셈여림: ')+name);buildStrengthPalette(id,type)};p.appendChild(b)})}
@@ -603,12 +633,12 @@ function followTrack(t,pos){
  * 직접 계산한다. 따라서 브라우저 렌더링이 한 프레임 늦거나 빨라도 음악과 따로
  * 느려지거나 빨라지지 않는다.
  */
-function startPlaybackIndicator(audioStartTime, stepSec){
+function startPlaybackIndicator(audioStartTime, stepSec, firstStep=0, stepCount=STEPS){
   followEnabled=true;
   if(!setupPlaybackOutline())return;
   playbackStartTime=audioStartTime;
   playbackStepSec=stepSec;
-  playbackModeSteps=STEPS;
+  playbackModeSteps=stepCount;
 
   const ctx=audioCtx;
   function frame(){
@@ -621,8 +651,8 @@ function startPlaybackIndicator(audioStartTime, stepSec){
     const maxStep=playbackModeSteps-1;
     const pos=elapsed<0?0:Math.min(maxStep,Math.max(0,elapsed/playbackStepSec));
     playbackTracks.forEach(t=>{
-      t.outline.style.transform='translate3d('+(pos*t.stepWidth)+'px,0,0)';
-      followTrack(t,pos);
+      t.outline.style.transform='translate3d('+((pos+firstStep)*t.stepWidth)+'px,0,0)';
+      followTrack(t,pos+firstStep);
     });
     if(elapsed<=playbackModeSteps*playbackStepSec+0.05){
       playbackRaf=requestAnimationFrame(frame);
@@ -641,13 +671,13 @@ async function getAudioContext(){if(!audioCtx)audioCtx=new(window.AudioContext||
 const bufferCache=new Map();
 async function decodeDataUrl(u){if(bufferCache.has(u))return bufferCache.get(u);const ctx=await getAudioContext();const ab=await(await fetch(u)).arrayBuffer();const buf=await ctx.decodeAudioData(ab);bufferCache.set(u,buf);return buf}
 async function scheduleBuffer(u,when,volume,rate=1,fall=null){if(!u)return;const ctx=await getAudioContext();const buf=await decodeDataUrl(u);const src=ctx.createBufferSource();src.buffer=buf;src.playbackRate.value=rate;if(fall)applyFallCurve(src.playbackRate,when,rate,fall);const gain=ctx.createGain();gain.gain.value=volume;src.connect(gain).connect(ctx.destination);src.start(when);scheduledSources.push(src);src.onended=()=>{const i=scheduledSources.indexOf(src);if(i>=0)scheduledSources.splice(i,1)}}
-function stopAll(){playing=false;scheduledSources.forEach(s=>{try{s.stop()}catch(e){}});scheduledSources=[];removePlaybackOutline();if(audioCtx){try{audioCtx.suspend()}catch(e){}}}
-async function play(mode){stopAll();const ctx=await getAudioContext();playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;startPlaybackIndicator(start,step);const jobs=[];for(let c=0;c<STEPS;c++){const when=start+c*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
+function stopAll(){++playToken;playing=false;scheduledSources.forEach(s=>{try{s.stop()}catch(e){}});scheduledSources=[];removePlaybackOutline();if(audioCtx){try{audioCtx.suspend()}catch(e){}}}
+async function play(mode){stopAll();const token=++playToken;const ctx=await getAudioContext();if(token!==playToken)return;playing=true;const step=stepMs()/1000;const lead=.15;const start=ctx.currentTime+lead;const firstStep=(Number(document.getElementById('rangeStart').value)-1)*cellsPerBar(),endStep=Number(document.getElementById('rangeEnd').value)*cellsPerBar(),stepCount=endStep-firstStep;startPlaybackIndicator(start,step,firstStep,stepCount);const jobs=[];for(let c=firstStep;c<endStep;c++){const when=start+(c-firstStep)*step;if(mode!=='janggu'){for(let r=0;r<melody.length;r++){const v=melody[r][c];
       if(splitCols.has(c)){
         if(v&&v.a){const d=artData(v.a,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.a.strength||'중'],d.rate,d.fallRate))}
         if(v&&v.b){const d=artData(v.b,currentNotes()[r]);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when+step/2,STRENGTH_VOLUME[v.b.strength||'중'],d.rate,d.fallRate))}
       }else{const d=artData(v);if(d&&d.u)jobs.push(scheduleBuffer(d.u,when,STRENGTH_VOLUME[v.strength||'중'],d.rate,d.fallRate))}
-    }}if(mode!=='melody'){const stroke=janggu[c];const strokeName=stroke&&(stroke.stroke||stroke);if(strokeName&&JANGGU_AUDIO[strokeName]){const jp=jangguPick(strokeName);jobs.push(scheduleBuffer(jp.u,when-jangguAdvance(strokeName,jp.rate),STRENGTH_VOLUME[(stroke.strength||'중')],jp.rate))}}}await Promise.all(jobs);const token=++playToken;await sleep((STEPS*step+lead)*1000);if(token===playToken)playing=false}
+    }}if(mode!=='melody'){const stroke=janggu[c];const strokeName=stroke&&(stroke.stroke||stroke);if(strokeName&&JANGGU_AUDIO[strokeName]){const jp=jangguPick(strokeName);jobs.push(scheduleBuffer(jp.u,when-jangguAdvance(strokeName,jp.rate),STRENGTH_VOLUME[(stroke.strength||'중')],jp.rate))}}}await Promise.all(jobs);await sleep((stepCount*step+lead)*1000);if(token===playToken){playing=false;removePlaybackOutline()}}
 
 
 let statusTimer=null;
@@ -815,6 +845,12 @@ document.getElementById('jangdan').onchange=setJangdan;
 document.getElementById('speed').oninput=function(){speedPosition=Number(this.value);updateSpeedUI();if(playing)setStatus('속도는 다음 재생부터 적용돼요.')};
 document.getElementById('speedReset').onclick=resetSpeed;
 updateSpeedUI();
+const rangeStart=document.getElementById('rangeStart'),rangeEnd=document.getElementById('rangeEnd');
+for(let b=1;b<=BARS;b++){for(const select of [rangeStart,rangeEnd]){const option=document.createElement('option');option.value=b;option.textContent=b+'장단';select.appendChild(option)}}
+rangeStart.value=1;rangeEnd.value=BARS;
+rangeStart.onchange=()=>{stopAll();if(Number(rangeStart.value)>Number(rangeEnd.value))rangeEnd.value=rangeStart.value};
+rangeEnd.onchange=()=>{stopAll();if(Number(rangeEnd.value)<Number(rangeStart.value))rangeStart.value=rangeEnd.value};
+document.getElementById('rangeReset').onclick=()=>{stopAll();rangeStart.value=1;rangeEnd.value=BARS};
 bindClick('playAll',()=>play('all'));bindClick('playMelody',()=>play('melody'));bindClick('playJanggu',()=>play('janggu'));bindClick('stop',stopAll);
 
 // ---- 통합 다운로드 메뉴 ----
