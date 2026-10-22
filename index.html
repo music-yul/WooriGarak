@@ -51,9 +51,9 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .export-menu .menu-help{font-size:11px;color:#8a6a52;line-height:1.5;padding:2px 4px 0}
 .status-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:104px;z-index:29;max-width:90vw;padding:7px 16px;border-radius:999px;background:rgba(107,46,34,.93);color:#fff8f5;font-size:13px;font-weight:700;letter-spacing:.2px;text-align:center;box-shadow:0 4px 14px rgba(107,46,34,.22);pointer-events:none;opacity:0;transition:opacity .25s ease}
 .status-bar.show{opacity:1}
-.bottom-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:min(94vw,620px);box-sizing:border-box;background:rgba(255,252,246,.98);border:1px solid #e8dcc8;border-radius:20px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:10px;padding:12px 16px;z-index:30;box-shadow:0 6px 20px rgba(107,46,34,.12)}
+.bottom-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:max-content;max-width:96vw;box-sizing:border-box;background:rgba(255,252,246,.98);border:1px solid #e8dcc8;border-radius:20px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;padding:10px 12px;z-index:30;box-shadow:0 6px 20px rgba(107,46,34,.12)}
 .bottom-bar-group{display:flex;align-items:center;justify-content:center;gap:8px;min-width:0}
-.bottom-bar-group+ .bottom-bar-group{border-top:1px solid #ecdfca;padding-top:10px}
+.bottom-bar-group[aria-label="저장"]{margin-left:2px;padding-left:10px;border-left:1px solid #ecdfca}
 .bottom-bar button{flex:0 0 auto;white-space:nowrap}
 .play{width:58px;height:58px;border-radius:50%;font-size:24px;padding:0}
 .primary{font-weight:800;background:#a8402c;color:#fff;border-color:#a8402c}
@@ -88,10 +88,11 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
 .student-fields input{height:32px;width:88px}
 .export-menu{bottom:106px;min-width:190px}
 .status-bar{bottom:106px;font-size:12px;padding:6px 13px}
-.bottom-bar{width:94vw;max-width:620px;bottom:max(12px,env(safe-area-inset-bottom));padding:10px 10px;border-radius:18px;gap:8px}
-.bottom-bar-group{gap:6px}
-.bottom-bar-group+ .bottom-bar-group{padding-top:8px}
-.bottom-bar button{padding:8px 10px;font-size:13px}}
+.bottom-bar{width:max-content;max-width:96vw;bottom:max(12px,env(safe-area-inset-bottom));padding:7px 8px;border-radius:18px;gap:5px}
+.bottom-bar-group{gap:5px}
+.bottom-bar-group[aria-label="저장"]{margin-left:1px;padding-left:6px}
+.bottom-bar button{padding:7px 8px;font-size:12px}
+.bottom-bar .play{width:46px;height:46px;font-size:21px}}
 .export-busy{opacity:.6;pointer-events:none}
 .speed-box{display:flex;align-items:center;gap:8px;height:38px}
 .speed-box span{font-size:12px;color:#8a6a52;font-weight:700}
@@ -701,7 +702,14 @@ function studentInfo(){
 function confirmStudentInfo(){
   const {id,name}=studentInfo();
   if(id&&name)return true;
-  return confirm('학번과 이름이 입력되지 않았습니다.\n이대로 저장하면 파일 이름과 악보에 학번·이름이 표시되지 않습니다.\n\n그대로 저장할까요?');
+  const idInput=document.getElementById('studentId');
+  const nameInput=document.getElementById('studentName');
+  const missing=[];
+  if(!id)missing.push('학번');
+  if(!name)missing.push('이름');
+  alert(missing.join('과 ')+'을 입력해 주세요. 입력 전에는 다운로드할 수 없습니다.');
+  (!id?idInput:nameInput)?.focus();
+  return false;
 }
 function projectTitle(){
   const {id,name}=studentInfo();
