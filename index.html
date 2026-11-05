@@ -182,7 +182,7 @@ header{height:auto;min-height:88px;background:transparent;border-bottom:none;dis
   <div class="menu-help">한꺼번에 다운로드하면 음원·악보·작업파일이 각각 저장됩니다. ZIP 파일로 묶이지 않습니다.</div>
 </div>
 <div id="status" class="status-bar" role="status" aria-live="polite"></div>
-<div class="bottom-bar"><div class="bottom-bar-group" aria-label="구간"><label for="rangeStart">구간</label><select id="rangeStart" aria-label="시작 장단"></select><span>~</span><select id="rangeEnd" aria-label="끝 장단"></select><button id="rangeReset" type="button">전체</button></div><div class="bottom-bar-group" aria-label="재생"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play" aria-label="함께 재생">▶</button><button id="stop">■ 정지</button></div><div class="bottom-bar-group" aria-label="저장"><button id="downloadMenuButton" aria-expanded="false" aria-controls="exportMenu">⬇ 다운로드</button></div></div>
+<div class="bottom-bar"><div class="bottom-bar-group" aria-label="구간"><label for="rangeStart">구간</label><select id="rangeStart" aria-label="시작 장단"></select><span>~</span><select id="rangeEnd" aria-label="끝 장단"></select><button id="rangeReset" type="button">전체</button></div><div class="bottom-bar-group" aria-label="재생"><button id="playMelody">선율만</button><button id="playJanggu">장구만</button><button id="playAll" class="primary play" aria-label="함께 재생">▶</button><button id="stop">■ 정지</button></div><div class="bottom-bar-group" aria-label="저장"><button id="projectImportButton" type="button" title="저장한 작업파일을 불러와 이어서 편집">📂 작업 불러오기</button><input id="projectImportInput" type="file" accept=".json,.woorigarak,application/json" hidden><button id="downloadMenuButton" aria-expanded="false" aria-controls="exportMenu">⬇ 다운로드</button></div></div>
 <script>
 const TORI={
   // 기본음은 간단히 표시하고, 선택 가능한 최대 음역은 창작용으로 넉넉히 준비한다.
@@ -1048,6 +1048,35 @@ document.addEventListener('change',()=>{saveDirty=true},true);
 setInterval(()=>{if(saveDirty){saveDirty=false;saveState()}},1500);
 window.addEventListener('beforeunload',()=>{if(saveDirty)saveState()});
 askRestore();
+
+/* 작업파일 불러오기: 기존 자동 저장 및 작업파일 내보내기 형식과 호환 */
+const projectImportInput=document.getElementById('projectImportInput');
+document.getElementById('projectImportButton').addEventListener('click',()=>projectImportInput.click());
+projectImportInput.addEventListener('change',async event=>{
+  const file=event.target.files&&event.target.files[0];
+  if(!file)return;
+  try{
+    if(file.size>10*1024*1024)throw new Error('작업파일이 너무 큽니다(최대 10MB).');
+    const data=JSON.parse(await file.text());
+    if(!data||typeof data!=='object'||!data.stores||typeof data.stores!=='object'||Array.isArray(data.stores))throw new Error('우리가락짓기 작업파일 형식이 아닙니다.');
+    if(data.format&&data.format!=='woorigarak-project')throw new Error('다른 프로그램의 작업파일입니다.');
+    if(data.version&&data.version>1)throw new Error('더 최신 버전에서 저장한 파일입니다.');
+    if(data.tori&&!TORI[data.tori])throw new Error('지원하지 않는 토리입니다.');
+    if(data.jangdan&&!JANGDAN_CONFIG[data.jangdan])throw new Error('지원하지 않는 장단입니다.');
+    const valid=Object.entries(data.stores).every(([key,store])=>!store||(
+      !!JANGDAN_CONFIG[key]&&typeof store==='object'&&
+      (store.melody==null||(Array.isArray(store.melody)&&store.melody.every(Array.isArray)))&&
+      (store.janggu==null||Array.isArray(store.janggu))));
+    if(!valid)throw new Error('작업파일 안의 악보 데이터가 올바르지 않습니다.');
+    if(!confirm('현재 작업을 저장한 파일의 내용으로 교체할까요?\n저장하지 않은 현재 작업은 사라집니다.'))return;
+    stopAll();
+    restoreState(data);
+    saveState();
+    saveDirty=false;
+    setStatus('작업파일을 불러왔습니다. 이어서 편집할 수 있습니다.');
+  }catch(error){console.error('작업파일 불러오기 실패',error);alert('작업파일을 불러오지 못했습니다.\n'+error.message);setStatus('작업파일 불러오기 실패');}
+  finally{projectImportInput.value='';}
+});
 
 </script>
 </body></html>
